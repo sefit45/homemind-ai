@@ -1,0 +1,354 @@
+// src/services/userAssetsStore.js
+
+const STORAGE_KEY = "homemind_user_assets";
+
+export const ASSET_TYPES = [
+  {
+    value: "real_estate",
+    label: "נדל״ן",
+    icon: "🏠",
+  },
+  {
+    value: "vehicle",
+    label: "רכבים",
+    icon: "🚗",
+  },
+  {
+    value: "crypto",
+    label: "קריפטו",
+    icon: "🪙",
+  },
+  {
+    value: "checking_account",
+    label: "עו״ש בנקאי",
+    icon: "💳",
+  },
+  {
+    value: "bank_deposit",
+    label: "פקדונות בנקאיים",
+    icon: "🏦",
+  },
+  {
+    value: "securities",
+    label: "ניירות ערך",
+    icon: "📊",
+  },
+  {
+    value: "keren_hishtalmut",
+    label: "קרנות השתלמות",
+    icon: "📈",
+  },
+  {
+    value: "pension",
+    label: "ביטוחי מנהלים / פנסיות",
+    icon: "🏛️",
+  },
+  {
+    value: "liability",
+    label: "התחייבויות",
+    icon: "⚠️",
+  },
+  {
+    value: "other_asset",
+    label: "נכס אחר",
+    icon: "💎",
+  },
+];
+
+const defaultAssets = [
+  {
+    id: "asset_budapest_apartment",
+    type: "real_estate",
+    name: "דירת בודפשט",
+    description: "Dob utca 49, Budapest",
+    country: "Hungary",
+    city: "Budapest",
+    estimatedValue: 678300,
+    debt: 0,
+    monthlyIncome: 8000,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_israel_apartment",
+    type: "real_estate",
+    name: "דירה בישראל",
+    description: "נכס מגורים",
+    country: "ישראל",
+    city: "פתח תקווה",
+    estimatedValue: 3500000,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_bank_deposit_1",
+    type: "bank_deposit",
+    name: "פיקדון בנקאי ראשי",
+    description: "פיקדון שקלי",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 500000,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_bank_deposit_2",
+    type: "bank_deposit",
+    name: "פיקדון דולרי",
+    description: "פיקדון במטבע זר",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 98,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "USD",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_keren_hishtalmut",
+    type: "keren_hishtalmut",
+    name: "קרן השתלמות",
+    description: "מסלול מנייתי",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 157192,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_vehicle_1",
+    type: "vehicle",
+    name: "רכב משפחתי",
+    description: "SUV",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 60000,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_vehicle_2",
+    type: "vehicle",
+    name: "רכב שני",
+    description: "רכב עירוני",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 48000,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_crypto_btc",
+    type: "crypto",
+    name: "אחזקות קריפטו",
+    description: "Bitcoin / Crypto Holdings",
+    country: "",
+    city: "",
+    estimatedValue: 33155,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_checking_account",
+    type: "checking_account",
+    name: "עו״ש בנקאי",
+    description: "חשבון עובר ושב",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 3930,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_mortgage",
+    type: "liability",
+    name: "משכנתא",
+    description: "הלוואת דיור",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 0,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "asset_other_1",
+    type: "other_asset",
+    name: "ציוד וטכנולוגיה",
+    description: "מחשבים, ציוד עבודה ונכסים נוספים",
+    country: "ישראל",
+    city: "",
+    estimatedValue: 50000,
+    debt: 0,
+    monthlyIncome: 0,
+    currency: "ILS",
+    valuationMode: "manual",
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+function normalizeLegacyAsset(asset) {
+  const legacyTypeMap = {
+    cash: "checking_account",
+    investment_fund: "keren_hishtalmut",
+    investment: "securities",
+  };
+
+  return {
+    id:
+      asset.id ||
+      `asset_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    type: legacyTypeMap[asset.type] || asset.type || "other_asset",
+    name: asset.name || "נכס ללא שם",
+    description: asset.description || "",
+    country: asset.country || "",
+    city: asset.city || "",
+    estimatedValue: Number(asset.estimatedValue || 0),
+    debt: Number(asset.debt || 0),
+    monthlyIncome: Number(asset.monthlyIncome || 0),
+    currency: asset.currency || "ILS",
+    valuationMode: asset.valuationMode || "manual",
+    updatedAt: asset.updatedAt || new Date().toISOString(),
+  };
+}
+
+export function loadUserAssets() {
+  const existing = localStorage.getItem(STORAGE_KEY);
+
+  if (existing) {
+    try {
+      const parsedAssets = JSON.parse(existing);
+      const normalizedAssets = parsedAssets.map(normalizeLegacyAsset);
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedAssets));
+
+      return normalizedAssets;
+    } catch (error) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultAssets));
+      return defaultAssets;
+    }
+  }
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultAssets));
+
+  return defaultAssets;
+}
+
+export function saveUserAssets(assets) {
+  const normalizedAssets = assets.map(normalizeLegacyAsset);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedAssets));
+}
+
+export function addUserAsset(asset) {
+  const assets = loadUserAssets();
+
+  const newAsset = normalizeLegacyAsset({
+    ...asset,
+    id: `asset_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    updatedAt: new Date().toISOString(),
+  });
+
+  const nextAssets = [newAsset, ...assets];
+
+  saveUserAssets(nextAssets);
+
+  return nextAssets;
+}
+
+export function updateUserAsset(assetId, updates) {
+  const assets = loadUserAssets();
+
+  const nextAssets = assets.map((asset) =>
+    asset.id === assetId
+      ? normalizeLegacyAsset({
+          ...asset,
+          ...updates,
+          id: asset.id,
+          updatedAt: new Date().toISOString(),
+        })
+      : asset
+  );
+
+  saveUserAssets(nextAssets);
+
+  return nextAssets;
+}
+
+export function deleteUserAsset(assetId) {
+  const assets = loadUserAssets();
+  const nextAssets = assets.filter((asset) => asset.id !== assetId);
+
+  saveUserAssets(nextAssets);
+
+  return nextAssets;
+}
+
+export function resetUserAssetsToDefault() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultAssets));
+
+  return defaultAssets;
+}
+
+export function calculateUserAssetsSummary() {
+  const assets = loadUserAssets();
+
+  const totalAssets = assets
+    .filter((asset) => asset.type !== "liability")
+    .reduce(
+      (sum, asset) => sum + Math.max(Number(asset.estimatedValue || 0), 0),
+      0
+    );
+
+  const assetDebts = assets
+    .filter((asset) => asset.type !== "liability")
+    .reduce((sum, asset) => sum + Math.max(Number(asset.debt || 0), 0), 0);
+
+  const liabilities = assets
+    .filter((asset) => asset.type === "liability")
+    .reduce((sum, asset) => {
+      const estimatedValue = Math.abs(Number(asset.estimatedValue || 0));
+      const debt = Math.abs(Number(asset.debt || 0));
+
+      return sum + Math.max(estimatedValue, debt);
+    }, 0);
+
+  const monthlyIncome = assets
+    .filter((asset) => asset.type !== "liability")
+    .reduce((sum, asset) => sum + Number(asset.monthlyIncome || 0), 0);
+
+  const totalDebt = assetDebts + liabilities;
+
+  return {
+    assets,
+    totalAssets,
+    totalDebt,
+    netWorth: totalAssets - totalDebt,
+    monthlyIncome,
+    assetsCount: assets.length,
+  };
+}

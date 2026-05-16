@@ -1,0 +1,31 @@
+# ROOT
+
+# NODE
+node_modules
+**/node_modules
+
+# DIST
+dist
+**/dist
+
+# ENV
+.env
+**/.env
+
+# PYTHON
+__pycache__
+*.pyc
+
+# BACKEND
+backend/uploads
+backend/__pycache__
+backend/.env
+
+# EXPO
+.expo
+
+# VSCODE
+.vscode
+
+# MAC
+.DS_Store

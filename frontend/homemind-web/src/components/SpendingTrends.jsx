@@ -31,7 +31,7 @@ export default function SpendingTrends() {
   if (!stats.length) {
     return (
       <section className="rounded-[34px] border border-white/10 bg-white/[0.04] p-7">
-        <div className="text-3xl font-black">Spending Trends</div>
+        <div className="text-3xl font-black">מגמות הוצאות</div>
         <div className="text-slate-400 mt-2">אין עדיין נתונים להצגת מגמות.</div>
       </section>
     );
@@ -52,9 +52,9 @@ export default function SpendingTrends() {
     <section className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
       <div className="flex items-center justify-between mb-7">
         <div>
-          <div className="text-3xl font-black text-white">Spending Trends</div>
+          <div className="text-3xl font-black text-white">מגמות הוצאות</div>
           <div className="text-slate-400 text-sm mt-1">
-            מגמות הוצאה חודשיות, ממוצע ותחזית בסיסית
+            מגמות הוצאה חודשיות, ממוצע ותחזית בסיסית לפי העסקאות הממופות
           </div>
         </div>
 

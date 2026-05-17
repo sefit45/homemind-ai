@@ -292,12 +292,22 @@ export default function TransactionImportCenter() {
     window.dispatchEvent(new Event("homemind:history-cleared"));
   };
 
+  const handleClearAllWithConfirmation = () => {
+    const confirmed = window.confirm(
+      "האם אתה בטוח שברצונך למחוק את כל הטרנזקציות, ההיסטוריה החודשית והנתונים שיובאו? פעולה זו אינה ניתנת לשחזור."
+    );
+
+    if (!confirmed) return;
+
+    handleClearAll();
+  };
+
   return (
     <section className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
       <div className="flex items-center justify-between mb-7 gap-5">
         <div>
           <div className="text-3xl font-black text-white">
-            Transaction Import Center
+            מרכז ייבוא טרנזקציות
           </div>
 
           <div className="text-slate-400 text-sm mt-1">
@@ -307,15 +317,15 @@ export default function TransactionImportCenter() {
 
         <div className="flex items-center gap-3 flex-wrap justify-end">
           <div className="rounded-2xl bg-emerald-400/10 border border-emerald-400/20 px-4 py-3 text-emerald-300 font-bold">
-            Stored: {storedCount}
+            נשמרו: {storedCount}
           </div>
 
           <div className="rounded-2xl bg-indigo-400/10 border border-indigo-400/20 px-4 py-3 text-indigo-300 font-bold">
-            Months: {vaultSummary.monthsCount}
+            חודשים: {vaultSummary.monthsCount}
           </div>
 
           <div className="rounded-2xl bg-cyan-400/10 border border-cyan-400/20 px-4 py-3 text-cyan-300 font-bold">
-            Import Engine
+            מנוע ייבוא פעיל
           </div>
         </div>
       </div>
@@ -327,9 +337,7 @@ export default function TransactionImportCenter() {
       >
         {!bankMode && (
           <div className="rounded-3xl border border-white/10 bg-[#07111F]/70 p-4">
-            <div className="text-slate-400 text-sm mb-2">
-              חודש לקובץ הבא
-            </div>
+            <div className="text-slate-400 text-sm mb-2">חודש לקובץ הבא</div>
 
             <select
               value={selectedMonth}
@@ -348,9 +356,7 @@ export default function TransactionImportCenter() {
         )}
 
         <div className="rounded-3xl border border-white/10 bg-[#07111F]/70 p-4">
-          <div className="text-slate-400 text-sm mb-2">
-            שנה
-          </div>
+          <div className="text-slate-400 text-sm mb-2">שנה</div>
 
           <select
             value={selectedYear}
@@ -366,9 +372,7 @@ export default function TransactionImportCenter() {
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-[#07111F]/70 p-4">
-          <div className="text-slate-400 text-sm mb-2">
-            מקור
-          </div>
+          <div className="text-slate-400 text-sm mb-2">מקור</div>
 
           <select
             value={source}
@@ -384,9 +388,7 @@ export default function TransactionImportCenter() {
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-[#07111F]/70 p-4">
-          <div className="text-slate-400 text-sm mb-2">
-            היסטוריה קיימת
-          </div>
+          <div className="text-slate-400 text-sm mb-2">היסטוריה קיימת</div>
 
           <div className="text-2xl font-black">
             {vaultSummary.transactionsCount.toLocaleString("he-IL")} עסקאות
@@ -416,9 +418,7 @@ export default function TransactionImportCenter() {
         <div className="flex flex-col items-center justify-center text-center">
           <div className="text-5xl mb-4">📤</div>
 
-          <div className="text-2xl font-black">
-            הוסף קובץ לרשימת ההעלאה
-          </div>
+          <div className="text-2xl font-black">הוסף קובץ לרשימת ההעלאה</div>
 
           <div className="text-slate-400 mt-3 max-w-xl leading-7">
             {bankMode
@@ -431,6 +431,26 @@ export default function TransactionImportCenter() {
           </div>
         </div>
       </label>
+
+      <div className="mt-6 rounded-[28px] border border-rose-400/20 bg-rose-400/5 p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <div className="text-xl font-black text-rose-200">
+            ניקוי מלא של טרנזקציות
+          </div>
+
+          <div className="text-slate-400 text-sm mt-1 leading-6">
+            פעולה זו מוחקת את כל העסקאות שנקלטו, את ההיסטוריה החודשית ואת
+            תצוגת העסקאות שעובדו — כדי לאפשר העלאה נקייה מחדש.
+          </div>
+        </div>
+
+        <button
+          onClick={handleClearAllWithConfirmation}
+          className="rounded-2xl border border-rose-500/30 bg-gradient-to-r from-rose-500/20 to-red-500/20 text-rose-200 px-6 py-3 font-black hover:scale-105 hover:from-rose-500/30 hover:to-red-500/30 transition-all duration-300 shadow-[0_0_25px_rgba(244,63,94,0.25)]"
+        >
+          🗑️ מחק את כל הטרנזקציות
+        </button>
+      </div>
 
       {fileQueue.length > 0 && (
         <div className="mt-7 rounded-[30px] border border-white/10 bg-[#07111F]/70 p-5">
@@ -460,10 +480,10 @@ export default function TransactionImportCenter() {
               </button>
 
               <button
-                onClick={handleClearAll}
-                className="rounded-2xl border border-rose-400/20 bg-rose-400/10 text-rose-300 px-5 py-3 font-black hover:bg-rose-400/20 transition-all"
+                onClick={handleClearAllWithConfirmation}
+                className="rounded-2xl border border-rose-500/30 bg-rose-400/10 text-rose-300 px-5 py-3 font-black hover:bg-rose-400/20 transition-all"
               >
-                נקה הכל
+                🗑️ מחק הכל
               </button>
             </div>
           </div>
@@ -570,7 +590,7 @@ export default function TransactionImportCenter() {
 
                   <div className="text-slate-400 text-sm mt-1">
                     {tx.date} · {tx.category} · {tx.issuer} ·{" "}
-                    {getMonthLabel(tx.importMonth)} {tx.importYear} · confidence{" "}
+                    {getMonthLabel(tx.importMonth)} {tx.importYear} · דיוק{" "}
                     {tx.confidence || 90}%
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import { Transaction } from "../types/transactions";
+import { normalizeStoredTransaction } from "./transactionStore";
 
 export interface MonthlyVault {
   id: string;
@@ -30,6 +31,9 @@ const HEBREW_MONTHS = [
 
 function buildTransactionKey(transaction: Transaction): string {
   return [
+    transaction.importFileName,
+    (transaction as any).sourceSheet,
+    (transaction as any).sourceRow,
     transaction.date,
     transaction.merchant,
     transaction.amount,
@@ -49,7 +53,16 @@ export function loadFinancialHistory(): MonthlyVault[] {
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((month) => ({
+      ...month,
+      transactions: Array.isArray(month.transactions)
+        ? month.transactions.map((transaction: Transaction) =>
+            normalizeStoredTransaction(transaction)
+          )
+        : [],
+    }));
   } catch {
     return [];
   }
@@ -70,7 +83,11 @@ export function saveMonthToVault(params: {
   const existingTransactions = existingMonth?.transactions || [];
   const existingKeys = new Set(existingTransactions.map(buildTransactionKey));
 
-  const newTransactions = params.transactions.filter((transaction) => {
+  const normalizedTransactions = params.transactions.map((transaction) =>
+    normalizeStoredTransaction(transaction)
+  );
+
+  const newTransactions = normalizedTransactions.filter((transaction) => {
     const key = buildTransactionKey(transaction);
 
     if (existingKeys.has(key)) return false;

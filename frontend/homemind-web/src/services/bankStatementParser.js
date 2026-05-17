@@ -14,6 +14,7 @@ function normalizeHeader(value) {
 
 function parseNumber(value) {
   if (value === undefined || value === null || value === "") return 0;
+
   if (typeof value === "number") return value;
 
   const cleaned = String(value)
@@ -47,7 +48,16 @@ function parseDate(value) {
   if (parts.length === 3) {
     let [day, month, year] = parts;
 
-    if (year.length === 2) year = `20${year}`;
+    if (day.length === 4) {
+      return `${day}-${String(month).padStart(2, "0")}-${String(year).padStart(
+        2,
+        "0"
+      )}`;
+    }
+
+    if (year.length === 2) {
+      year = `20${year}`;
+    }
 
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(
       2,
@@ -55,7 +65,67 @@ function parseDate(value) {
     )}`;
   }
 
-  return text;
+  const native = new Date(text);
+  if (!Number.isNaN(native.getTime())) {
+    return native.toISOString().slice(0, 10);
+  }
+
+  return "";
+}
+
+function extractMonthYear(date) {
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return {
+      importMonth: null,
+      importYear: null,
+    };
+  }
+
+  return {
+    importMonth: parsedDate.getMonth() + 1,
+    importYear: parsedDate.getFullYear(),
+  };
+}
+
+function isFutureDate(date) {
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  return parsedDate > today;
+}
+
+function buildHeaderMap(headers) {
+  const map = {};
+
+  headers.forEach((header, index) => {
+    const normalized = normalizeHeader(header);
+
+    if (normalized) {
+      map[normalized] = index;
+    }
+  });
+
+  return map;
+}
+
+function getCell(row, headerMap, names) {
+  for (const name of names) {
+    const normalized = normalizeHeader(name);
+
+    if (headerMap[normalized] !== undefined) {
+      return row[headerMap[normalized]];
+    }
+  }
+
+  return "";
 }
 
 function detectCategory(description) {
@@ -66,55 +136,65 @@ function detectCategory(description) {
   if (text.includes("כאל")) return "אשראי";
   if (text.includes("ביט")) return "העברות";
   if (text.includes("משכורת")) return "הכנסה";
-  if (text.includes("בטוח לאומי") || text.includes("ביטוח לאומי")) return "הכנסה";
+  if (text.includes("בטוח לאומי") || text.includes("ביטוח לאומי")) {
+    return "הכנסה";
+  }
   if (text.includes("בינאנס") || text.includes("binance")) return "קריפטו";
   if (text.includes("חשמל")) return "חשבונות";
   if (text.includes("ארנונה")) return "דיור";
   if (text.includes("ביטוח")) return "ביטוח";
-  if (text.includes("סופר")) return "מזון";
-  if (text.includes("רמי לוי")) return "מזון";
+  if (text.includes("הלוואה")) return "הלוואות";
+  if (text.includes("פיקדון")) return "חסכון";
   if (text.includes("העברה")) return "העברות";
   if (text.includes("משיכת מזומן")) return "מזומן";
-  if (text.includes("פיקדון")) return "חסכון / פיקדון";
+  if (text.includes("סופר")) return "מזון";
+  if (text.includes("רמי לוי")) return "מזון";
 
   return "כללי";
 }
 
-function buildHeaderMap(headers) {
-  const map = {};
+function isSummaryOrMetadataRow(description) {
+  const text = String(description || "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
 
-  headers.forEach((header, index) => {
-    const key = normalizeHeader(header);
-    if (key) map[key] = index;
-  });
+  if (!text) return true;
 
-  return map;
+  return (
+    text.includes("יתרה") ||
+    text.includes("סהכ") ||
+    text.includes("סךהכל") ||
+    text.includes("סיכום") ||
+    text.includes("לתאריך") ||
+    text.includes("תנועותבחשבון") ||
+    text.includes("שםחשבון") ||
+    text.includes("מספרחשבון")
+  );
 }
 
-function getCell(row, headerMap, names) {
-  for (const name of names) {
-    const key = normalizeHeader(name);
-    if (headerMap[key] !== undefined) {
-      return row[headerMap[key]];
-    }
-  }
+function normalizeBankTransaction(tx) {
+  const description = cleanText(tx.description);
+  const category = detectCategory(description);
 
-  return "";
-}
-
-function extractMonthYear(date) {
-  const parsed = new Date(date);
-
-  if (!Number.isNaN(parsed.getTime())) {
-    return {
-      month: parsed.getMonth() + 1,
-      year: parsed.getFullYear(),
-    };
-  }
+  const isCreditCardSettlement =
+    category === "אשראי" ||
+    description.includes("מקס") ||
+    description.toLowerCase().includes("max") ||
+    description.includes("ישראכרט") ||
+    description.includes("כאל");
 
   return {
-    month: null,
-    year: null,
+    ...tx,
+    merchant: description,
+    description,
+    category,
+    mappedCategory: category,
+    source: "bank_statement",
+    issuer: "בנק",
+    accountName: "עו״ש",
+    confidence: 95,
+    internalTransfer: isCreditCardSettlement,
+    excludeFromExpenses: isCreditCardSettlement,
   };
 }
 
@@ -132,19 +212,21 @@ export async function parseBankStatement(file) {
   const rows = XLSX.utils.sheet_to_json(sheet, {
     header: 1,
     defval: "",
-    raw: false,
+    raw: true,
   });
 
   const headerRowIndex = rows.findIndex((row) => {
-    const normalizedRow = row.map(normalizeHeader);
+    const normalized = row.map(normalizeHeader);
 
     return (
-      normalizedRow.includes("תאריך") &&
-      normalizedRow.includes("תיאורהתנועה") &&
-      (
-        normalizedRow.includes("זכות/חובה") ||
-        normalizedRow.includes("חובה/זכות")
-      )
+      normalized.includes("תאריך") &&
+      (normalized.includes("תיאורהתנועה") ||
+        normalized.includes("תיאור") ||
+        normalized.includes("פרטים")) &&
+      (normalized.includes("זכות/חובה") ||
+        normalized.includes("חובה/זכות") ||
+        normalized.includes("סכום") ||
+        normalized.includes("סכוםפעולה"))
     );
   });
 
@@ -160,7 +242,9 @@ export async function parseBankStatement(file) {
     .map((row, index) => {
       const date = parseDate(getCell(row, headerMap, ["תאריך"]));
 
-      const valueDate = parseDate(getCell(row, headerMap, ["יום ערך"]));
+      const valueDate = parseDate(
+        getCell(row, headerMap, ["יום ערך", "תאריך ערך"])
+      );
 
       const description = cleanText(
         getCell(row, headerMap, ["תיאור התנועה", "תיאור", "פרטים"])
@@ -185,10 +269,10 @@ export async function parseBankStatement(file) {
         getCell(row, headerMap, ["אסמכתה", "אסמכתא"])
       );
 
-      const { month, year } = extractMonthYear(date);
+      const { importMonth, importYear } = extractMonthYear(date);
 
-      return {
-        id: `bank_tx_${Date.now()}_${index}`,
+      return normalizeBankTransaction({
+        id: `bank_tx_${sheetName}_${headerRowIndex + index + 1}_${date}_${amount}`,
         date,
         valueDate,
         merchant: description,
@@ -196,30 +280,34 @@ export async function parseBankStatement(file) {
         amount,
         balance,
         reference,
-        category: detectCategory(description),
         type: amount >= 0 ? "income" : "expense",
-        confidence: 95,
-        issuer: "בנק",
-        source: "bank_statement",
-        accountName: "עו״ש",
-        importMonth: month,
-        importYear: year,
-      };
+        importMonth,
+        importYear,
+        importFileName: file.name,
+        sourceSheet: sheetName,
+        sourceRow: headerRowIndex + index + 2,
+      });
     })
-    .filter((tx) => tx.date && tx.description && Number(tx.amount) !== 0)
+    .filter((tx) => tx.date)
+    .filter((tx) => !isFutureDate(tx.date))
+    .filter((tx) => tx.importMonth && tx.importYear)
+    .filter((tx) => tx.description)
+    .filter((tx) => !isSummaryOrMetadataRow(tx.description))
+    .filter((tx) => Number(tx.amount) !== 0)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const totalIncome = transactions
-    .filter((tx) => tx.amount > 0)
-    .reduce((sum, tx) => sum + tx.amount, 0);
+    .filter((tx) => Number(tx.amount || 0) > 0)
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
   const totalExpenses = transactions
-    .filter((tx) => tx.amount < 0)
-    .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    .filter((tx) => Number(tx.amount || 0) < 0)
+    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
 
   return {
     issuer: "בנק",
     transactions,
+    transactionsCount: transactions.length,
     summary: {
       transactionCount: transactions.length,
       totalIncome,

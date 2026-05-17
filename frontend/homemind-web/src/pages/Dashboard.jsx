@@ -9,8 +9,6 @@ import {
   Area,
   XAxis,
   Tooltip,
-  BarChart,
-  Bar,
 } from "recharts";
 
 import TransactionsList from "../components/TransactionsList";
@@ -29,17 +27,13 @@ import HistoricalMemoryPanel from "../components/HistoricalMemoryPanel";
 import LiveHumanAdvisor from "../components/LiveHumanAdvisor";
 import UnifiedCashflowBrain from "../components/UnifiedCashflowBrain";
 import AssetsHub from "../components/AssetsHub";
-
-import {
-  calculateUnifiedFinancialSummary,
-  generateUnifiedInsights,
-} from "../services/unifiedFinancialEngine";
-
-import {
-  calculateUserAssetsSummary,
-} from "../services/userAssetsStore";
-
+import FinancialDataHub from "../components/FinancialDataHub";
+import { generateUnifiedInsights } from "../services/unifiedFinancialEngine";
+import { calculateUserAssetsSummary } from "../services/userAssetsStore";
 import { runDailyValuationSyncIfNeeded } from "../services/valuationEngine";
+import AIConfidencePanel from "../components/AIConfidencePanel";
+import FinancialAICopilot from "../components/FinancialAICopilot";
+import { loadStoredTransactions } from "../services/transactionStore";
 
 const COLORS = [
   "#38BDF8",
@@ -60,89 +54,8 @@ const trendData = [
   { month: "מאי", value: 10.4 },
 ];
 
-const cashflowData = [
-  { month: "ינו", income: 22000, expenses: 15000 },
-  { month: "פבר", income: 20500, expenses: 16500 },
-  { month: "מרץ", income: 23500, expenses: 14000 },
-  { month: "אפר", income: 22800, expenses: 17000 },
-  { month: "מאי", income: 24500, expenses: 13200 },
-];
-
-const transactions = [
-  {
-    id: 1,
-    merchant: "רמי לוי",
-    category: "מזון וסופר",
-    amount: -720,
-    date: "2026-05-02",
-    recurring: false,
-  },
-  {
-    id: 2,
-    merchant: "OpenAI",
-    category: "מנויים וטכנולוגיה",
-    amount: -79,
-    date: "2026-05-04",
-    recurring: true,
-  },
-  {
-    id: 3,
-    merchant: "Claude AI",
-    category: "מנויים וטכנולוגיה",
-    amount: -73,
-    date: "2026-05-05",
-    recurring: true,
-  },
-  {
-    id: 4,
-    merchant: "מסעדות",
-    category: "בילויים ומסעדות",
-    amount: -1240,
-    date: "2026-05-07",
-    recurring: false,
-  },
-  {
-    id: 5,
-    merchant: "Binance",
-    category: "קריפטו והשקעות",
-    amount: -5000,
-    date: "2026-05-09",
-    recurring: false,
-  },
-  {
-    id: 6,
-    merchant: "משכורת",
-    category: "הכנסה",
-    amount: 52000,
-    date: "2026-05-10",
-    recurring: true,
-  },
-];
-
-const goals = [
-  {
-    title: "חופש כלכלי",
-    progress: 64,
-    target: "₪20.0M",
-  },
-  {
-    title: "קרן חירום",
-    progress: 82,
-    target: "₪0.6M",
-  },
-  {
-    title: "פרישה",
-    progress: 58,
-    target: "₪8.0M",
-  },
-];
-
 function formatCurrency(value) {
   return `₪${Math.round(Number(value || 0)).toLocaleString("he-IL")}`;
-}
-
-function getGoalProgress(goal) {
-  return goal.progress;
 }
 
 function getAssetGroup(asset) {
@@ -188,15 +101,11 @@ function buildAssetAllocationData(assets) {
     .forEach((asset) => {
       const group = getAssetGroup(asset);
       const value = Math.max(Number(asset.estimatedValue || 0), 0);
-
       grouped[group] = (grouped[group] || 0) + value;
     });
 
   return Object.entries(grouped)
-    .map(([name, value]) => ({
-      name,
-      value,
-    }))
+    .map(([name, value]) => ({ name, value }))
     .filter((item) => item.value > 0)
     .sort((a, b) => b.value - a.value);
 }
@@ -219,7 +128,6 @@ function calculateDashboardSummary(assets) {
     .reduce((sum, asset) => {
       const estimatedDebt = Math.abs(Number(asset.estimatedValue || 0));
       const explicitDebt = Math.abs(Number(asset.debt || 0));
-
       return sum + Math.max(estimatedDebt, explicitDebt);
     }, 0);
 
@@ -256,17 +164,19 @@ function CollapsibleSection({
         className="w-full flex items-center justify-between gap-5 p-6 text-right hover:bg-white/[0.035] transition-all"
         aria-expanded={isOpen}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <div
-            className={`w-11 h-11 rounded-2xl bg-cyan-400/10 border border-cyan-300/20 text-cyan-300 flex items-center justify-center transition-transform ${
+            className={`w-11 h-11 rounded-2xl bg-cyan-400/10 border border-cyan-300/20 text-cyan-300 flex items-center justify-center transition-transform shrink-0 ${
               isOpen ? "rotate-180" : ""
             }`}
           >
             {icon}
           </div>
 
-          <div>
-            <div className="text-2xl lg:text-3xl font-black">{title}</div>
+          <div className="min-w-0">
+            <div className="text-2xl lg:text-3xl font-black truncate">
+              {title}
+            </div>
 
             {subtitle && (
               <div className="text-slate-400 mt-1 text-sm lg:text-base">
@@ -277,8 +187,8 @@ function CollapsibleSection({
         </div>
 
         {badge && (
-          <div className="hidden sm:block rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-300 px-4 py-2 font-black">
-            {badge}
+          <div className="hidden sm:block rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-300 px-4 py-2 font-black shrink-0">
+            {isOpen ? "פתוח" : badge}
           </div>
         )}
       </button>
@@ -289,20 +199,40 @@ function CollapsibleSection({
 }
 
 export default function Dashboard() {
+  const [transactions, setTransactions] = useState(() =>
+    loadStoredTransactions()
+  );
+
   const [assetsSummary, setAssetsSummary] = useState(() =>
     calculateUserAssetsSummary()
   );
 
   useEffect(() => {
+    const refreshDashboardData = () => {
+      setTransactions(loadStoredTransactions());
+      setAssetsSummary(calculateUserAssetsSummary());
+    };
+
     runDailyValuationSyncIfNeeded();
-    setAssetsSummary(calculateUserAssetsSummary());
+    refreshDashboardData();
+
+    window.addEventListener("homemind:transactions-updated", refreshDashboardData);
+    window.addEventListener("homemind:history-cleared", refreshDashboardData);
+    window.addEventListener("storage", refreshDashboardData);
+
+    return () => {
+      window.removeEventListener(
+        "homemind:transactions-updated",
+        refreshDashboardData
+      );
+      window.removeEventListener("homemind:history-cleared", refreshDashboardData);
+      window.removeEventListener("storage", refreshDashboardData);
+    };
   }, []);
 
   const userAssets = assetsSummary.assets || [];
   const assetAllocationData = buildAssetAllocationData(userAssets);
   const dashboardSummary = calculateDashboardSummary(userAssets);
-
-  const unifiedSummary = calculateUnifiedFinancialSummary();
   const unifiedInsights = generateUnifiedInsights();
 
   const insights =
@@ -328,11 +258,24 @@ export default function Dashboard() {
         <div className="max-w-[1400px] mx-auto">
           <TopNavigation />
 
+          <CollapsibleSection
+            title="מרכז נתונים פיננסי"
+            subtitle="ייבוא עו״ש ואשראי, בדיקת נתונים, מיפוי חכם ותזרים"
+            badge="סגור"
+            defaultOpen={true}
+          >
+            <FinancialDataHub
+              onTransactionsProcessed={() => {
+                setTransactions(loadStoredTransactions());
+              }}
+            />
+          </CollapsibleSection>
+
           <div className="mt-10 mb-10">
             <LiveHumanAdvisor />
           </div>
 
-          <div className="flex items-start justify-between mb-10">
+          <div className="flex items-start justify-between mb-10 gap-6">
             <div>
               <div className="text-6xl font-black">👋 שלום ספי</div>
 
@@ -347,6 +290,7 @@ export default function Dashboard() {
                   localStorage.removeItem("homemind_user_assets");
                   localStorage.removeItem("homemind_user_assets_v1");
                   setAssetsSummary(calculateUserAssetsSummary());
+                  setTransactions(loadStoredTransactions());
                   window.location.reload();
                 }}
                 className="bg-cyan-400 text-black font-bold rounded-2xl px-6 py-4"
@@ -357,7 +301,7 @@ export default function Dashboard() {
           </div>
 
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-            <div className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
+            <div className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7 min-w-0">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <div className="text-3xl font-black">חלוקת ההון</div>
@@ -391,20 +335,22 @@ export default function Dashboard() {
                 {assetAllocationData.map((asset, index) => (
                   <div
                     key={asset.name}
-                    className="flex items-center justify-between"
+                    className="grid grid-cols-[1fr_auto] items-center gap-4 min-w-0"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className="w-3 h-3 rounded-full"
+                        className="w-3 h-3 rounded-full shrink-0"
                         style={{
                           backgroundColor: COLORS[index % COLORS.length],
                         }}
                       />
 
-                      <div className="text-slate-300">{asset.name}</div>
+                      <div className="text-slate-300 truncate">
+                        {asset.name}
+                      </div>
                     </div>
 
-                    <div className="text-xl font-black">
+                    <div className="font-black text-[clamp(16px,1.35vw,22px)] leading-tight text-left whitespace-nowrap tabular-nums">
                       {formatCurrency(asset.value)}
                     </div>
                   </div>
@@ -412,18 +358,18 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="xl:col-span-2 rounded-[34px] bg-gradient-to-br from-cyan-500/10 to-indigo-500/20 border border-white/10 p-7">
-              <div className="flex items-start justify-between">
-                <div>
+            <div className="xl:col-span-2 rounded-[34px] bg-gradient-to-br from-cyan-500/10 to-indigo-500/20 border border-white/10 p-7 min-w-0">
+              <div className="flex items-start justify-between gap-6">
+                <div className="min-w-0">
                   <div className="text-slate-300 text-xl">
                     ההון העצמי הכולל שלך
                   </div>
 
-                  <div className="text-7xl font-black mt-4">
+                  <div className="font-black mt-4 leading-tight text-[clamp(38px,4.4vw,72px)] break-words">
                     {formatCurrency(dashboardSummary.netWorth)}
                   </div>
 
-                  <div className="flex gap-4 mt-6">
+                  <div className="flex gap-4 mt-6 flex-wrap">
                     <div className="bg-cyan-500/20 text-cyan-300 rounded-full px-5 py-2 font-bold">
                       {assetAllocationData.length} קבוצות נכסים
                     </div>
@@ -435,28 +381,23 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="bg-white/5 rounded-3xl p-6 w-[280px] shrink-0">
-                  <div className="text-slate-400 text-right">
-                    נכסים
-                  </div>
+                <div className="bg-white/5 rounded-3xl p-6 w-[300px] shrink-0 min-w-0">
+                  <div className="text-slate-400 text-right">נכסים</div>
 
-                  <div className="text-[42px] font-black mt-2 text-right leading-none whitespace-nowrap">
+                  <div className="font-black mt-2 text-right leading-tight text-[clamp(26px,2.4vw,40px)] break-words tabular-nums">
                     {formatCurrency(dashboardSummary.totalAssets)}
                   </div>
 
                   <div className="border-t border-white/10 my-5" />
 
-                  <div className="text-slate-400 text-right">
-                    התחייבויות
-                  </div>
+                  <div className="text-slate-400 text-right">התחייבויות</div>
 
-                  <div className="text-[42px] font-black mt-2 text-rose-300 text-right leading-none whitespace-nowrap">
+                  <div className="font-black mt-2 text-rose-300 text-right leading-tight text-[clamp(26px,2.4vw,40px)] break-words tabular-nums">
                     {dashboardSummary.totalDebt > 0
                       ? `-${formatCurrency(dashboardSummary.totalDebt)}`
                       : formatCurrency(0)}
                   </div>
                 </div>
-
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-10">
@@ -554,6 +495,14 @@ export default function Dashboard() {
           </CollapsibleSection>
 
           <CollapsibleSection
+            title="מנוע ביטחון AI"
+            subtitle="בדיקת רמת הביטחון של ה־AI במיפוי העסקאות"
+            badge="סגור"
+          >
+            <AIConfidencePanel />
+          </CollapsibleSection>
+
+          <CollapsibleSection
             title="חוקר היסטוריה פיננסית"
             subtitle="חקירת ההיסטוריה הפיננסית"
             badge="סגור"
@@ -604,12 +553,9 @@ export default function Dashboard() {
           <CollapsibleSection
             title="עוזר חכם ותובנות פיננסיות"
             subtitle="עוזר פיננסי חכם לצד ציר תובנות"
-            badge="סגור"
+            badge="חדש"
           >
-            <section className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-              <AICopilotPanel />
-              <SmartInsightsTimeline />
-            </section>
+            <FinancialAICopilot />
           </CollapsibleSection>
 
           <CollapsibleSection
@@ -635,34 +581,23 @@ export default function Dashboard() {
           >
             <section className="grid grid-cols-1 xl:grid-cols-2 gap-8">
               <div>
-                <div className="text-2xl font-black mb-5">
-                  מלאי נכסים
-                </div>
+                <div className="text-2xl font-black mb-5">מלאי נכסים</div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5">
                   {assetAllocationData.map((asset) => (
                     <div
                       key={asset.name}
-                      className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6"
+                      className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 min-w-0"
                     >
                       <div className="text-5xl mb-5">
                         {getAssetIcon(asset.name)}
                       </div>
 
-                      <div className="text-xl text-slate-300">
+                      <div className="text-xl text-slate-300 truncate">
                         {asset.name}
                       </div>
 
-                      <div
-                        className={`
-                          font-black mt-4 leading-none tracking-tight
-                          ${
-                            String(asset.value).length > 7
-                              ? "text-[28px]"
-                              : "text-[42px]"
-                          }
-                        `}
-                      >
+                      <div className="font-black mt-4 leading-tight tracking-tight text-[clamp(22px,2vw,36px)] break-words tabular-nums">
                         {formatCurrency(asset.value)}
                       </div>
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { loadFinancialHistory } from "../services/financialHistoryVault";
+import { resolveTransactionCategory } from "../services/transactionStore";
 
 function formatCurrency(value) {
   return `₪${Math.round(Math.abs(value)).toLocaleString("he-IL")}`;
@@ -17,7 +18,8 @@ function getMerchantStats(month) {
 
   return Object.values(
     expenses.reduce((acc, tx) => {
-      const merchant = tx.merchant || "לא ידוע";
+      const merchant = tx.merchant || tx.description || "לא ידוע";
+      const category = resolveTransactionCategory(tx);
 
       if (!acc[merchant]) {
         acc[merchant] = {
@@ -30,7 +32,7 @@ function getMerchantStats(month) {
 
       acc[merchant].amount += Math.abs(Number(tx.amount || 0));
       acc[merchant].count += 1;
-      acc[merchant].categories.add(tx.category || "לא מסווג");
+      acc[merchant].categories.add(category);
 
       return acc;
     }, {})
@@ -60,7 +62,7 @@ export default function TopMerchants() {
   if (!history.length) {
     return (
       <section className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
-        <div className="text-3xl font-black">Top Merchants</div>
+        <div className="text-3xl font-black">בתי עסק מובילים</div>
         <div className="text-slate-400 mt-2">
           עדיין אין נתונים להצגת בתי עסק מובילים.
         </div>
@@ -72,12 +74,10 @@ export default function TopMerchants() {
     <section className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
       <div className="flex items-center justify-between mb-7 gap-5">
         <div>
-          <div className="text-3xl font-black text-white">
-            Top Merchants
-          </div>
+          <div className="text-3xl font-black text-white">בתי עסק מובילים</div>
 
           <div className="text-slate-400 text-sm mt-1">
-            בתי העסק המשמעותיים ביותר לפי חודש
+            בתי העסק המשמעותיים ביותר לפי חודש ולפי מיפוי קטגוריות מדויק
           </div>
         </div>
 

@@ -1,7 +1,9 @@
-import { loadStoredTransactions } from "../services/transactionStore";
+import { useMemo, useState } from "react";
+import { loadFinancialHistory } from "../services/financialHistoryVault";
+import { resolveTransactionCategory } from "../services/transactionStore";
 
 function formatCurrency(value) {
-  return `₪${Math.round(Math.abs(value)).toLocaleString("he-IL")}`;
+  return `₪${Math.round(Math.abs(Number(value || 0))).toLocaleString("he-IL")}`;
 }
 
 function getExpenseTransactions(transactions) {
@@ -14,8 +16,8 @@ function getIncomeTransactions(transactions) {
 
 function getCategoryTotals(transactions) {
   return getExpenseTransactions(transactions).reduce((acc, tx) => {
-    const category = tx.category || "כללי";
-    acc[category] = (acc[category] || 0) + Math.abs(tx.amount);
+    const category = resolveTransactionCategory(tx);
+    acc[category] = (acc[category] || 0) + Math.abs(Number(tx.amount || 0));
     return acc;
   }, {});
 }
@@ -43,74 +45,113 @@ function estimateRecurringExpenses(transactions) {
     "APPLE",
     "GOOGLE",
     "MICROSOFT",
+    "STACKBLITZ",
+    "BOLT",
+    "SHOPIFY",
+    "NAME-CHEAP",
   ];
 
   return getExpenseTransactions(transactions)
     .filter((tx) =>
       recurringKeywords.some((keyword) =>
-        String(tx.merchant).toUpperCase().includes(keyword)
+        String(tx.merchant || "").toUpperCase().includes(keyword)
       )
     )
-    .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
+    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
 }
 
 export default function MonthlyAnalytics() {
-  const transactions = loadStoredTransactions();
+  const history = loadFinancialHistory();
 
-  const income = getIncomeTransactions(transactions).reduce(
-    (sum, tx) => sum + Math.abs(tx.amount),
-    0
+  const [selectedMonthId, setSelectedMonthId] = useState(
+    history[history.length - 1]?.id || ""
   );
 
-  const expenses = getExpenseTransactions(transactions).reduce(
-    (sum, tx) => sum + Math.abs(tx.amount),
-    0
-  );
+  const selectedMonth =
+    history.find((month) => month.id === selectedMonthId) ||
+    history[history.length - 1];
 
-  const netCashflow = income - expenses;
-  const recurringExpenses = estimateRecurringExpenses(transactions);
-  const topCategory = getTopExpenseCategory(transactions);
+  const transactions = selectedMonth?.transactions || [];
+
+  const analyticsData = useMemo(() => {
+    const income = getIncomeTransactions(transactions).reduce(
+      (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
+      0
+    );
+
+    const expenses = getExpenseTransactions(transactions).reduce(
+      (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
+      0
+    );
+
+    const netCashflow = income - expenses;
+    const recurringExpenses = estimateRecurringExpenses(transactions);
+    const topCategory = getTopExpenseCategory(transactions);
+
+    return {
+      income,
+      expenses,
+      netCashflow,
+      recurringExpenses,
+      topCategory,
+      transactionCount: transactions.length,
+    };
+  }, [transactions]);
+
+  if (!history.length) {
+    return (
+      <section className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
+        <div className="text-2xl font-black">ניתוח חודשי אמיתי</div>
+        <div className="text-slate-400 mt-2">
+          עדיין אין נתונים חודשיים. העלה קבצי אשראי או בנק לפי חודשים.
+        </div>
+      </section>
+    );
+  }
 
   const analytics = [
     {
-      title: "עסקאות שנשמרו",
-      value: transactions.length.toLocaleString("he-IL"),
-      subtitle: "מהקבצים שיובאו למערכת",
+      title: "עסקאות בחודש",
+      value: analyticsData.transactionCount.toLocaleString("he-IL"),
+      subtitle: selectedMonth?.label || "חודש נבחר",
       icon: "🧾",
       tone: "neutral",
     },
     {
       title: "הכנסות",
-      value: formatCurrency(income),
-      subtitle: "מתוך העסקאות האמיתיות",
+      value: formatCurrency(analyticsData.income),
+      subtitle: "מתוך עסקאות החודש בלבד",
       icon: "💼",
       tone: "positive",
     },
     {
       title: "הוצאות",
-      value: formatCurrency(expenses),
-      subtitle: "סך חיובים שנקלטו",
+      value: formatCurrency(analyticsData.expenses),
+      subtitle: "סך חיובים בחודש הנבחר",
       icon: "💳",
       tone: "negative",
     },
     {
       title: "תזרים נטו",
-      value: `${netCashflow >= 0 ? "+" : "-"}${formatCurrency(netCashflow)}`,
-      subtitle: netCashflow >= 0 ? "תזרים חיובי" : "תזרים שלילי",
+      value: `${analyticsData.netCashflow >= 0 ? "+" : "-"}${formatCurrency(
+        analyticsData.netCashflow
+      )}`,
+      subtitle:
+        analyticsData.netCashflow >= 0 ? "תזרים חיובי" : "תזרים שלילי",
       icon: "🌊",
-      tone: netCashflow >= 0 ? "positive" : "negative",
+      tone: analyticsData.netCashflow >= 0 ? "positive" : "negative",
     },
     {
       title: "קטגוריה מובילה",
-      value: topCategory.category,
-      subtitle: formatCurrency(topCategory.amount),
+      value: analyticsData.topCategory.category,
+      subtitle: formatCurrency(analyticsData.topCategory.amount),
       icon: "🔥",
       tone: "warning",
     },
     {
       title: "מנויים מזוהים",
-      value: formatCurrency(recurringExpenses),
-      subtitle: "זיהוי ראשוני לפי בית עסק",
+      value: formatCurrency(analyticsData.recurringExpenses),
+      subtitle: "זיהוי לפי בית עסק בחודש הנבחר",
       icon: "🔁",
       tone: "neutral",
     },
@@ -118,16 +159,30 @@ export default function MonthlyAnalytics() {
 
   return (
     <section className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
-      <div className="flex items-center justify-between mb-7">
+      <div className="flex items-center justify-between mb-7 gap-5">
         <div>
           <div className="text-2xl font-black">ניתוח חודשי אמיתי</div>
           <div className="text-slate-400 mt-1">
-            מבוסס על העסקאות שיובאו מ־MAX ונשמרו במערכת
+            מבוסס רק על העסקאות של החודש הנבחר
           </div>
         </div>
 
-        <div className="rounded-2xl bg-emerald-400/10 border border-emerald-400/20 px-4 py-3 text-emerald-300 font-bold">
-          Real Data
+        <div className="flex items-center gap-3">
+          <select
+            value={selectedMonth?.id || ""}
+            onChange={(event) => setSelectedMonthId(event.target.value)}
+            className="rounded-2xl bg-black/30 border border-white/10 px-5 py-3 text-white outline-none"
+          >
+            {history.map((month) => (
+              <option key={month.id} value={month.id}>
+                {month.label}
+              </option>
+            ))}
+          </select>
+
+          <div className="rounded-2xl bg-emerald-400/10 border border-emerald-400/20 px-4 py-3 text-emerald-300 font-bold">
+            Real Data
+          </div>
         </div>
       </div>
 
@@ -153,9 +208,7 @@ export default function MonthlyAnalytics() {
               />
             </div>
 
-            <div className="text-slate-400 text-sm mb-2">
-              {item.title}
-            </div>
+            <div className="text-slate-400 text-sm mb-2">{item.title}</div>
 
             <div className="text-2xl font-black leading-tight">
               {item.value}

@@ -1,54 +1,87 @@
+import { saveCategoryLearning } from "./transactionLearningStore";
+
 const STORAGE_KEY = "homemind_bank_transactions_v1";
 
-const defaultBankTransactions = [];
+function buildBankTransactionKey(tx) {
+  return [
+    tx.date,
+    tx.description,
+    tx.amount,
+    tx.balance,
+    tx.reference,
+    tx.sourceRow,
+  ]
+    .map((value) => String(value ?? "").trim().toLowerCase())
+    .join("|");
+}
+
+export function getBankTransactions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 export function loadBankTransactions() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-
-  if (!raw) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultBankTransactions));
-    return defaultBankTransactions;
-  }
-
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : defaultBankTransactions;
-  } catch {
-    return defaultBankTransactions;
-  }
+  return getBankTransactions();
 }
 
-export function saveBankTransactions(transactions) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-  return transactions;
+export function addBankTransactions(transactions = []) {
+  const existing = getBankTransactions();
+  const keys = new Set(existing.map(buildBankTransactionKey));
+
+  const newTransactions = transactions.filter((tx) => {
+    const key = buildBankTransactionKey(tx);
+
+    if (keys.has(key)) return false;
+
+    keys.add(key);
+    return true;
+  });
+
+  const merged = [...existing, ...newTransactions];
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+
+  return merged;
 }
 
-export function addBankTransactions(newTransactions) {
-  const existing = loadBankTransactions();
+export function updateBankTransactionCategory(transactionId, category) {
+  const transactions = getBankTransactions();
 
-  const normalized = newTransactions.map((transaction, index) => ({
-    id:
-      transaction.id ||
-      `bank_tx_${Date.now()}_${index}_${Math.random()
-        .toString(36)
-        .slice(2)}`,
-    date: transaction.date || "",
-    description: transaction.description || "",
-    merchant: transaction.merchant || transaction.description || "",
-    category: transaction.category || "לא מסווג",
-    amount: Number(transaction.amount || 0),
-    balance: Number(transaction.balance || 0),
-    type: Number(transaction.amount || 0) >= 0 ? "income" : "expense",
-    source: transaction.source || "bank_statement",
-    accountName: transaction.accountName || "עו״ש",
-    importedAt: new Date().toISOString(),
-  }));
+  const updated = transactions.map((tx) => {
+    if (String(tx.id) !== String(transactionId)) {
+      return tx;
+    }
 
-  const updated = [...existing, ...normalized];
+    const merchant = tx.merchant || tx.description || "";
 
-  saveBankTransactions(updated);
+    saveCategoryLearning(merchant, category);
+
+    return {
+      ...tx,
+      category,
+      mappedCategory: category,
+      userCorrectedCategory: true,
+      categoryUpdatedAt: new Date().toISOString(),
+    };
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+  window.dispatchEvent(new Event("homemind:transactions-updated"));
 
   return updated;
+}
+
+export function saveBankTransactions(transactions = []) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  return transactions;
 }
 
 export function clearBankTransactions() {
@@ -56,27 +89,20 @@ export function clearBankTransactions() {
 }
 
 export function calculateBankTransactionsSummary() {
-  const transactions = loadBankTransactions();
+  const transactions = getBankTransactions();
 
   const income = transactions
-    .filter((tx) => Number(tx.amount) > 0)
+    .filter((tx) => Number(tx.amount || 0) > 0)
     .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
 
   const expenses = transactions
-    .filter((tx) => Number(tx.amount) < 0)
+    .filter((tx) => Number(tx.amount || 0) < 0)
     .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
 
-  const balance =
-    transactions.length > 0
-      ? Number(transactions[transactions.length - 1].balance || 0)
-      : 0;
-
   return {
-    transactions,
     count: transactions.length,
     income,
     expenses,
     netCashflow: income - expenses,
-    latestBalance: balance,
   };
 }

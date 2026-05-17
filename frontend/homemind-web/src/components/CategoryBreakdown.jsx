@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { loadFinancialHistory } from "../services/financialHistoryVault";
+import { resolveTransactionCategory } from "../services/transactionStore";
 
 function formatCurrency(value) {
   return `₪${Math.round(Math.abs(value)).toLocaleString("he-IL")}`;
@@ -17,7 +18,7 @@ function getCategoryStats(month) {
 
   return Object.entries(
     expenses.reduce((acc, tx) => {
-      const category = tx.category || "לא מסווג";
+      const category = resolveTransactionCategory(tx);
 
       if (!acc[category]) {
         acc[category] = {
@@ -55,7 +56,7 @@ export default function CategoryBreakdown() {
   if (!history.length) {
     return (
       <section className="rounded-[34px] border border-white/10 bg-white/[0.04] backdrop-blur-xl p-7">
-        <div className="text-3xl font-black">Category Breakdown</div>
+        <div className="text-3xl font-black">פירוט לפי קטגוריות</div>
         <div className="text-slate-400 mt-2">
           עדיין אין נתונים להצגת קטגוריות. העלה קבצי עסקאות לפי חודשים.
         </div>
@@ -68,10 +69,10 @@ export default function CategoryBreakdown() {
       <div className="flex items-center justify-between mb-7 gap-5">
         <div>
           <div className="text-3xl font-black text-white">
-            Category Breakdown
+            פירוט לפי קטגוריות
           </div>
           <div className="text-slate-400 text-sm mt-1">
-            פיצול הוצאות לפי קטגוריות רשמיות מהאקסל
+            פיצול הוצאות לפי המיפוי המדויק של הטרנזקציות
           </div>
         </div>
 

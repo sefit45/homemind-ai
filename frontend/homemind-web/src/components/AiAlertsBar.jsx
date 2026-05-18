@@ -172,7 +172,7 @@ function DashboardTabShell({ title, subtitle, children }) {
 }
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("data");
+const [activeTab, setActiveTab] = useState("dashboard");
 
   const [transactions, setTransactions] = useState(() =>
     loadStoredTransactions()
@@ -236,7 +236,13 @@ export default function Dashboard() {
           "המערכת מוכנה להמשך ניתוח עומק.",
         ];
 
-  const tabs = [
+const tabs = [
+    {
+      id: "dashboard",
+      icon: "🏠",
+      title: "דשבורד מרכזי",
+      subtitle: "תמונת מצב פיננסית מלאה",
+    },
     {
       id: "data",
       icon: "🛢️",
@@ -641,73 +647,77 @@ export default function Dashboard() {
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 p-5 lg:p-8">
+        <main className="flex-1 min-w-0 p-4 lg:p-6">
           <div className="max-w-[1680px] mx-auto">
             <TopNavigation />
 
-            <header className="mb-7 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-              <div className="flex items-center gap-5">
+            <AiAlertsBar />
+
+            <header className="mb-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+              <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-300 to-blue-600 p-[3px] shadow-[0_0_35px_rgba(34,211,238,0.55)]">
-                    <div className="w-full h-full rounded-full bg-[#07111f] flex items-center justify-center text-4xl">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-cyan-300 to-blue-600 p-[3px] shadow-[0_0_28px_rgba(34,211,238,0.45)]">
+                    <div className="w-full h-full rounded-full bg-[#07111f] flex items-center justify-center text-2xl">
                       👤
                     </div>
                   </div>
 
-                  <div className="absolute bottom-1 left-1 w-4 h-4 rounded-full bg-emerald-400 border-2 border-[#020617]" />
+                  <div className="absolute bottom-0 left-0 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#020617]" />
                 </div>
 
                 <div>
-                  <div className="text-5xl font-black tracking-tight">
+                  <div className="text-4xl font-black tracking-tight">
                     שלום ספי 👋
                   </div>
 
-                  <div className="text-slate-300 mt-2 text-lg">
+                  <div className="text-slate-300 mt-1 text-base">
                     מלאי ותנועות — נכסים ועסקאות אחרונות
                   </div>
                 </div>
               </div>
             </header>
 
-            <section className="grid grid-cols-1 2xl:grid-cols-[1.1fr_0.9fr] gap-6 mb-6">
-              <PremiumPanel className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-[0.75fr_1fr] gap-6">
-                  <div className="rounded-[26px] border border-white/10 bg-white/[0.045] p-7">
-                    <div className="text-4xl mb-5">💳</div>
+{activeTab === "dashboard" && (
+  <>
+    <section className="grid grid-cols-1 2xl:grid-cols-[1.1fr_0.9fr] gap-5 mb-5">
+              <PremiumPanel className="p-4">
+                <div className="grid grid-cols-1 lg:grid-cols-[0.72fr_1fr] gap-4">
+                  <div className="rounded-[22px] border border-white/10 bg-white/[0.045] p-4">
+                    <div className="text-2xl mb-2">💳</div>
 
-                    <div className="text-slate-400">נכסים</div>
+                    <div className="text-slate-400 text-sm">נכסים</div>
 
-                    <div className="text-4xl font-black mt-4">
+                    <div className="text-2xl font-black mt-2">
                       {formatCurrency(dashboardSummary.totalAssets)}
                     </div>
 
-                    <div className="border-t border-white/10 my-6" />
+                    <div className="border-t border-white/10 my-3" />
 
-                    <div className="text-slate-400">התחייבויות</div>
+                    <div className="text-slate-400 text-sm">התחייבויות</div>
 
-                    <div className="text-4xl font-black mt-4 text-rose-300">
+                    <div className="text-2xl font-black mt-2 text-rose-300">
                       {dashboardSummary.totalDebt > 0
                         ? `-${formatCurrency(dashboardSummary.totalDebt)}`
                         : formatCurrency(0)}
                     </div>
                   </div>
 
-                  <div className="rounded-[26px] border border-white/10 bg-white/[0.035] p-7 flex flex-col justify-center">
-                    <div className="text-slate-300 text-xl">
+                  <div className="rounded-[22px] border border-white/10 bg-white/[0.035] p-4 flex flex-col justify-center">
+                    <div className="text-slate-300 text-base">
                       ההון העצמי הכולל שלך
                     </div>
 
-                    <div className="font-black mt-5 text-[clamp(42px,5vw,76px)] leading-tight">
+                    <div className="font-black mt-2 text-[clamp(34px,4vw,56px)] leading-tight">
                       {formatCurrency(dashboardSummary.netWorth)}
                     </div>
 
-                    <div className="flex flex-wrap gap-4 mt-8">
-                      <div className="rounded-full bg-emerald-500/20 text-emerald-300 px-5 py-3 font-black">
+                    <div className="flex flex-wrap gap-3 mt-4">
+                      <div className="rounded-full bg-emerald-500/20 text-emerald-300 px-4 py-2 text-sm font-black">
                         הכנסה מנכסים:{" "}
                         {formatCurrency(dashboardSummary.monthlyIncome)}
                       </div>
 
-                      <div className="rounded-full bg-cyan-500/20 text-cyan-300 px-5 py-3 font-black">
+                      <div className="rounded-full bg-cyan-500/20 text-cyan-300 px-4 py-2 text-sm font-black">
                         {assetAllocationData.length} קבוצות נכסים
                       </div>
                     </div>
@@ -715,24 +725,24 @@ export default function Dashboard() {
                 </div>
               </PremiumPanel>
 
-              <PremiumPanel className="p-7">
+              <PremiumPanel className="p-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-3xl font-black">חלוקת ההון</div>
-                    <div className="text-slate-400 mt-1">חלוקת נכסים</div>
+                    <div className="text-2xl font-black">חלוקת ההון</div>
+                    <div className="text-slate-400 mt-1 text-sm">חלוקת נכסים</div>
                   </div>
 
-                  <div className="text-cyan-300 text-xl font-black">100%</div>
+                  <div className="text-cyan-300 text-lg font-black">100%</div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-6 items-center mt-4">
-                  <div className="h-[270px]">
+                <div className="grid grid-cols-1 lg:grid-cols-[0.9fr_1fr] gap-4 items-center mt-2">
+                  <div className="h-[165px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={assetAllocationData}
-                          innerRadius={72}
-                          outerRadius={112}
+                          innerRadius={44}
+                          outerRadius={68}
                           dataKey="value"
                         >
                           {assetAllocationData.map((entry, index) => (
@@ -746,7 +756,7 @@ export default function Dashboard() {
                     </ResponsiveContainer>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {assetAllocationData.map((asset, index) => (
                       <div
                         key={asset.name}
@@ -760,12 +770,12 @@ export default function Dashboard() {
                             }}
                           />
 
-                          <div className="text-slate-300 truncate">
+                          <div className="text-slate-300 text-sm truncate">
                             {asset.name}
                           </div>
                         </div>
 
-                        <div className="font-black tabular-nums">
+                        <div className="font-black text-sm tabular-nums">
                           {formatCurrency(asset.value)}
                         </div>
                       </div>
@@ -775,20 +785,22 @@ export default function Dashboard() {
               </PremiumPanel>
             </section>
 
-            <section className="grid grid-cols-1 2xl:grid-cols-[0.8fr_0.75fr_1.2fr] gap-6 mb-6">
-              <PremiumPanel className="p-6">
-                <div className="text-4xl mb-4">✨</div>
-                <div className="text-3xl font-black mb-5">תדרוך פיננסי חכם</div>
+            <section className="grid grid-cols-1 2xl:grid-cols-[0.8fr_0.75fr_1.2fr] gap-5 mb-5">
+              <PremiumPanel className="p-5">
+                <div className="text-3xl mb-3">✨</div>
+                <div className="text-2xl font-black mb-4">תדרוך פיננסי חכם</div>
 
-                <div className="space-y-4">
-                  {insights.map((item, index) => (
+                <div className="space-y-3">
+                  {insights.slice(0, 4).map((item, index) => (
                     <div
                       key={`${item}-${index}`}
-                      className="rounded-2xl border border-white/10 bg-white/[0.045] p-4 flex items-center justify-between gap-4"
+                      className="rounded-2xl border border-white/10 bg-white/[0.045] p-3 flex items-center justify-between gap-3"
                     >
-                      <div className="text-slate-200 leading-7">{item}</div>
+                      <div className="text-slate-200 leading-6 text-sm">
+                        {item}
+                      </div>
 
-                      <div className="w-10 h-10 rounded-2xl bg-cyan-400/10 border border-cyan-300/20 text-cyan-300 flex items-center justify-center shrink-0">
+                      <div className="w-9 h-9 rounded-2xl bg-cyan-400/10 border border-cyan-300/20 text-cyan-300 flex items-center justify-center shrink-0">
                         {index === 0
                           ? "✓"
                           : index === 1
@@ -802,13 +814,13 @@ export default function Dashboard() {
                 </div>
               </PremiumPanel>
 
-              <PremiumPanel className="p-6">
-                <div className="text-3xl font-black">מגמת שווי נקי</div>
-                <div className="text-emerald-300 mt-2 font-black text-xl">
+              <PremiumPanel className="p-5">
+                <div className="text-2xl font-black">מגמת שווי נקי</div>
+                <div className="text-emerald-300 mt-1 font-black text-lg">
                   +15.2% מתחילת השנה
                 </div>
 
-                <div className="h-[330px] mt-6">
+                <div className="h-[245px] mt-3">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={trendData}>
                       <defs>
@@ -847,29 +859,29 @@ export default function Dashboard() {
                 </div>
               </PremiumPanel>
 
-              <PremiumPanel className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="text-3xl font-black">מלאי נכסים</div>
+              <PremiumPanel className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-2xl font-black">מלאי נכסים</div>
 
                   <button
                     onClick={() => setActiveTab("inventory")}
-                    className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-5 py-3 text-emerald-300 font-black"
+                    className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-emerald-300 text-sm font-black"
                   >
                     לצפייה מלאה
                   </button>
                 </div>
 
-                <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
                   {assetAllocationData.slice(0, 6).map((asset) => (
                     <div
                       key={asset.name}
-                      className="rounded-[22px] border border-white/10 bg-white/[0.04] p-5 text-center"
+                      className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4 text-center"
                     >
-                      <div className="text-4xl mb-3">
+                      <div className="text-3xl mb-2">
                         {getAssetIcon(asset.name)}
                       </div>
-                      <div className="text-slate-300">{asset.name}</div>
-                      <div className="font-black mt-2 text-xl">
+                      <div className="text-slate-300 text-sm">{asset.name}</div>
+                      <div className="font-black mt-2 text-lg">
                         {formatCurrency(asset.value)}
                       </div>
                     </div>
@@ -878,7 +890,10 @@ export default function Dashboard() {
               </PremiumPanel>
             </section>
 
-            {renderActiveTab()}
+              </>
+)}
+
+{renderActiveTab()}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
               {[

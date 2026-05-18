@@ -7,3 +7,59 @@
 body {
   margin: 0;
 }
+:root {
+  --hm-scale: 0.88;
+  --hm-radius: 0.88;
+}
+
+.homemind-scale {
+  font-size: calc(16px * var(--hm-scale));
+}
+
+.homemind-scale .text-5xl {
+  font-size: 2.25rem;
+}
+
+.homemind-scale .text-4xl {
+  font-size: 1.9rem;
+}
+
+.homemind-scale .text-3xl {
+  font-size: 1.55rem;
+}
+
+.homemind-scale .text-2xl {
+  font-size: 1.25rem;
+}
+
+.homemind-scale .p-8 {
+  padding: 1.5rem;
+}
+
+.homemind-scale .p-7 {
+  padding: 1.35rem;
+}
+
+.homemind-scale .p-6 {
+  padding: 1.2rem;
+}
+
+.homemind-scale .gap-8 {
+  gap: 1.35rem;
+}
+
+.homemind-scale .gap-6 {
+  gap: 1.1rem;
+}
+
+.homemind-scale .mb-8 {
+  margin-bottom: 1.35rem;
+}
+
+.homemind-scale .mb-7 {
+  margin-bottom: 1.15rem;
+}
+
+.homemind-scale .mb-6 {
+  margin-bottom: 1rem;
+}

@@ -11,7 +11,10 @@ import {
   Tooltip,
 } from "recharts";
 
+
+
 import AiAlertsBar from "../components/AiAlertsBar";
+import AIIntelligenceStrip from "../components/AIIntelligenceStrip";
 import TransactionsList from "../components/TransactionsList";
 import MonthlyAnalytics from "../components/MonthlyAnalytics";
 import TopNavigation from "../components/TopNavigation";
@@ -30,6 +33,7 @@ import { calculateUserAssetsSummary } from "../services/userAssetsStore";
 import { runDailyValuationSyncIfNeeded } from "../services/valuationEngine";
 import AIConfidencePanel from "../components/AIConfidencePanel";
 import FinancialAICopilot from "../components/FinancialAICopilot";
+import UnifiedFinancialBrainPanel from "../components/UnifiedFinancialBrainPanel";
 import { loadStoredTransactions } from "../services/transactionStore";
 
 const COLORS = [
@@ -172,7 +176,7 @@ function DashboardTabShell({ title, subtitle, children }) {
 }
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("data");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   const [transactions, setTransactions] = useState(() =>
     loadStoredTransactions()
@@ -237,6 +241,22 @@ export default function Dashboard() {
         ];
 
   const tabs = [
+    {
+  id: "dashboard",
+  icon: "🏠",
+  title: "דשבורד מרכזי",
+  subtitle: "תמונת מצב פיננסית כוללת",
+  badge: "בית",
+},
+
+      {
+    id: "brain",
+    icon: "🧬",
+    title: "המוח הפיננסי",
+    subtitle: "בריאות, סיכון והמלצות",
+    badge: "AI",
+  },
+
     {
       id: "data",
       icon: "🛢️",
@@ -325,6 +345,16 @@ export default function Dashboard() {
   ];
 
   const renderActiveTab = () => {
+      if (activeTab === "brain") {
+    return (
+      <DashboardTabShell
+        title="המוח הפיננסי המאוחד"
+        subtitle="שכבת AI מרכזית שמחברת נכסים, עסקאות, תזרים, סיכון, הזדמנויות והתנהגות"
+      >
+        <UnifiedFinancialBrainPanel />
+      </DashboardTabShell>
+    );
+  }
     if (activeTab === "data") {
       return (
         <DashboardTabShell
@@ -519,7 +549,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white" dir="rtl">
+    <div className="homemind-scale min-h-screen bg-[#020617] text-white" dir="rtl">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-220px] right-[12%] w-[520px] h-[520px] rounded-full bg-cyan-500/10 blur-[150px]" />
         <div className="absolute bottom-[-260px] left-[18%] w-[620px] h-[620px] rounded-full bg-indigo-500/10 blur-[170px]" />
@@ -641,9 +671,13 @@ export default function Dashboard() {
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 p-5 lg:p-8">
+        <main className="dashboard-compact flex-1 min-w-0 p-3 lg:p-5">
           <div className="max-w-[1680px] mx-auto">
-            <TopNavigation />
+<TopNavigation />
+
+{activeTab === "dashboard" ? (
+  <>
+    <AIIntelligenceStrip />
 
             <header className="mb-7 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
               <div className="flex items-center gap-5">
@@ -878,7 +912,10 @@ export default function Dashboard() {
               </PremiumPanel>
             </section>
 
-            {renderActiveTab()}
+              </>
+) : (
+  renderActiveTab()
+)}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
               {[

@@ -128,6 +128,42 @@ function normalizeText(value) {
     .trim();
 }
 
+function isExpenseLikeType(type) {
+  return ["expense", "subscription", "investment", "cash_withdrawal"].includes(
+    type
+  );
+}
+
+function resolveFinalType(transaction, merchant) {
+  const currentType = transaction.type;
+
+  if (transaction.userCorrectedType && currentType) {
+    return currentType;
+  }
+
+  if (merchant.type === "credit_card_settlement") {
+    return "credit_card_settlement";
+  }
+
+  if (merchant.type === "transfer") {
+    return "transfer";
+  }
+
+  if (merchant.type === "income") {
+    return "income";
+  }
+
+  if (isExpenseLikeType(merchant.type)) {
+    return "expense";
+  }
+
+  if (["income", "expense", "transfer"].includes(currentType)) {
+    return currentType;
+  }
+
+  return "expense";
+}
+
 export function identifyMerchant(transaction) {
   const text = normalizeText(
     `${transaction.merchant || ""} ${transaction.description || ""} ${
@@ -149,32 +185,33 @@ export function identifyMerchant(transaction) {
     id: "unknown",
     merchantName: transaction.merchant || transaction.description || "לא מזוהה",
     category: transaction.category || "אחר",
-    type: Number(transaction.amount || 0) > 0 ? "income" : "expense",
+    type: transaction.type || "expense",
     confidence: 60,
   };
 }
 
 export function enrichWithMerchantIntelligence(transaction) {
   const merchant = identifyMerchant(transaction);
-  const amount = Number(transaction.amount || 0);
-
-  const finalType =
-    amount > 0 && merchant.type !== "credit_card_settlement"
-      ? "income"
-      : merchant.type;
+  const finalType = resolveFinalType(transaction, merchant);
 
   return {
     ...transaction,
+    type:
+      finalType === "credit_card_settlement"
+        ? "transfer"
+        : finalType === "subscription" || finalType === "investment"
+        ? "expense"
+        : finalType,
     merchantId: merchant.id,
     normalizedMerchant: merchant.merchantName,
     aiCategory: merchant.category,
     aiType: finalType,
     confidence: merchant.confidence,
     isIncome: finalType === "income",
-    isExpense: finalType === "expense",
-    isSubscription: finalType === "subscription",
+    isExpense: finalType === "expense" || isExpenseLikeType(finalType),
+    isSubscription: merchant.type === "subscription",
     isTransfer: finalType === "transfer",
-    isInvestment: finalType === "investment",
+    isInvestment: merchant.type === "investment",
     isCreditCardSettlement: finalType === "credit_card_settlement",
     excludeFromTrueExpenses:
       finalType === "credit_card_settlement" || finalType === "transfer",

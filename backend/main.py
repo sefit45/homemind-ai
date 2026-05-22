@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
 from app.api.router import api_router
+from app.config.settings import get_settings
 import os
 import json
 import re
@@ -12,12 +13,13 @@ import pdfplumber
 load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+settings = get_settings()
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_allowed_origins or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

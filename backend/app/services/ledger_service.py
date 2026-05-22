@@ -2,6 +2,7 @@ from uuid import UUID
 
 from app.domain.enums import TransactionType
 from app.domain.ledger import Account, Transaction
+from app.security.audit_log import AuditEvent, AuditLog
 from app.storage.repositories import (
     AccountRepository,
     InstitutionRepository,
@@ -21,11 +22,13 @@ class LedgerService:
         institutions: InstitutionRepository,
         accounts: AccountRepository,
         transactions: TransactionRepository,
+        audit_log: AuditLog | None = None,
     ) -> None:
         self.users = users
         self.institutions = institutions
         self.accounts = accounts
         self.transactions = transactions
+        self.audit_log = audit_log or AuditLog(enabled=False)
 
     async def create_account(self, account: Account) -> Account:
         await self._validate_user(account.user_id)
@@ -46,7 +49,14 @@ class LedgerService:
 
     async def create_transaction(self, transaction: Transaction) -> Transaction:
         await self._validate_transaction(transaction)
-        return await self.transactions.save(transaction)
+        saved = await self.transactions.save(transaction)
+        await self._audit(
+            "transaction_created",
+            saved.user_id,
+            "transaction",
+            saved.id,
+        )
+        return saved
 
     async def list_transactions(self, user_id: UUID) -> list[Transaction]:
         await self._validate_user(user_id)
@@ -135,7 +145,14 @@ class LedgerService:
             raise LedgerValidationError("Transaction does not exist.")
 
         transaction.is_duplicate_candidate = is_duplicate_candidate
-        return await self.transactions.save(transaction)
+        saved = await self.transactions.save(transaction)
+        await self._audit(
+            "transaction_marked_duplicate_candidate",
+            saved.user_id,
+            "transaction",
+            saved.id,
+        )
+        return saved
 
     async def mark_transaction_as_transfer(self, transaction_id: UUID) -> Transaction:
         return await self._mark_transaction_type(
@@ -163,7 +180,33 @@ class LedgerService:
 
         transaction.transaction_type = transaction_type
         transaction.is_excluded_from_cashflow = exclude_from_cashflow
-        return await self.transactions.save(transaction)
+        saved = await self.transactions.save(transaction)
+        transaction_type_value = (
+            transaction_type.value if hasattr(transaction_type, "value") else str(transaction_type)
+        )
+        await self._audit(
+            f"transaction_marked_{transaction_type_value}",
+            saved.user_id,
+            "transaction",
+            saved.id,
+        )
+        return saved
+
+    async def _audit(
+        self,
+        event_type: str,
+        user_id: UUID,
+        resource_type: str,
+        resource_id: UUID,
+    ) -> None:
+        await self.audit_log.record(
+            AuditEvent(
+                event_type=event_type,
+                user_id=user_id,
+                resource_type=resource_type,
+                resource_id=resource_id,
+            )
+        )
 
     async def _validate_user(self, user_id: UUID) -> None:
         user = await self.users.get(user_id)

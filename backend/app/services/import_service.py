@@ -18,6 +18,7 @@ from app.security.audit_log import AuditEvent, AuditLog
 from app.services.ledger_service import LedgerService, LedgerValidationError
 from app.storage.import_files import ImportFileStorage, ImportFileStorageError
 from app.storage.repositories import ImportBatchRepository, UserRepository
+from app.storage.transactions import NoopTransactionManager, TransactionManager
 
 
 class ImportValidationError(ValueError):
@@ -33,6 +34,7 @@ class ImportService:
         file_storage: ImportFileStorage | None = None,
         parsers: list[FinancialImportParser] | None = None,
         audit_log: AuditLog | None = None,
+        transaction_manager: TransactionManager | None = None,
     ) -> None:
         self.users = users
         self.import_batches = import_batches
@@ -40,6 +42,7 @@ class ImportService:
         self.file_storage = file_storage or ImportFileStorage()
         self.parsers = parsers or DEFAULT_IMPORT_PARSERS
         self.audit_log = audit_log or AuditLog()
+        self.transaction_manager = transaction_manager or NoopTransactionManager()
 
     async def create_import_batch(self, import_batch: ImportBatch) -> ImportBatch:
         user = await self.users.get(import_batch.user_id)
@@ -55,7 +58,7 @@ class ImportService:
             raise ImportValidationError("Import provider is not supported.")
 
         saved = await self.import_batches.save(import_batch)
-        await self._audit("import.created", saved)
+        await self._audit("import_created", saved)
         return saved
 
     async def list_import_batches(self, user_id):
@@ -94,7 +97,7 @@ class ImportService:
         self._touch(import_batch)
 
         saved = await self.import_batches.save(import_batch)
-        await self._audit("import.file_uploaded", saved)
+        await self._audit("import_file_uploaded", saved)
         return saved
 
     async def parse_import_batch(
@@ -113,7 +116,7 @@ class ImportService:
         import_batch.status = ImportBatchStatus.parsing
         self._touch(import_batch)
         import_batch = await self.import_batches.save(import_batch)
-        await self._audit("import.parse_started", import_batch)
+        await self._audit("import_parse_started", import_batch)
 
         try:
             metadata = ImportFileMetadata(
@@ -131,22 +134,23 @@ class ImportService:
                 source_type=ImportSourceType(import_batch.source_type),
                 provider=import_batch.provider or import_batch.provider_key,
             )
-            rows = parser.parse(content, context, metadata)
-            result = await self._process_rows(import_batch, account_id, rows, parser, context)
-            await self._audit("import.parse_completed", import_batch)
+            async with self.transaction_manager.transaction():
+                rows = parser.parse(content, context, metadata)
+                result = await self._process_rows(import_batch, account_id, rows, parser, context)
+            await self._audit("import_parse_completed", import_batch)
             return result
         except ImportValidationError:
             import_batch.status = ImportBatchStatus.failed
             self._touch(import_batch)
             await self.import_batches.save(import_batch)
-            await self._audit("import.parse_failed", import_batch)
+            await self._audit("import_parse_failed", import_batch)
             raise
         except Exception as error:
             import_batch.status = ImportBatchStatus.failed
             import_batch.error_message = str(error)
             self._touch(import_batch)
             await self.import_batches.save(import_batch)
-            await self._audit("import.parse_failed", import_batch)
+            await self._audit("import_parse_failed", import_batch)
             raise ImportValidationError(str(error)) from error
 
     async def enqueue_parse_job(self, import_batch: ImportBatch) -> None:

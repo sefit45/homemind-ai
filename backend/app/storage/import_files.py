@@ -1,10 +1,11 @@
 from pathlib import Path
+from typing import Protocol
 from uuid import UUID, uuid4
 
+from app.config.settings import get_settings
 from app.domain.enums import ImportFileType
 from app.domain.ledger import ImportFileMetadata
 
-MAX_IMPORT_FILE_SIZE_BYTES = 8 * 1024 * 1024
 SUPPORTED_IMPORT_EXTENSIONS = {
     ".csv": ImportFileType.csv,
     ".xls": ImportFileType.xls,
@@ -16,9 +17,25 @@ class ImportFileStorageError(ValueError):
     pass
 
 
-class ImportFileStorage:
-    def __init__(self, upload_root: Path | None = None) -> None:
-        self.upload_root = upload_root or Path(__file__).resolve().parents[2] / ".imports"
+class ImportFileStorageProtocol(Protocol):
+    def sanitize_filename(self, filename: str) -> str:
+        ...
+
+    def validate_file(self, filename: str, content: bytes) -> ImportFileMetadata:
+        ...
+
+    def save(self, import_batch_id: UUID, filename: str, content: bytes) -> ImportFileMetadata:
+        ...
+
+    def read(self, storage_key: str) -> bytes:
+        ...
+
+
+class LocalImportFileStorage:
+    def __init__(self, upload_root: Path | None = None, max_size_bytes: int | None = None) -> None:
+        settings = get_settings()
+        self.upload_root = upload_root or settings.import_storage_dir
+        self.max_size_bytes = max_size_bytes or settings.max_import_file_size_bytes
 
     def sanitize_filename(self, filename: str) -> str:
         candidate = Path(filename or "").name.strip().replace("\x00", "")
@@ -36,7 +53,7 @@ class ImportFileStorage:
 
     def validate_file(self, filename: str, content: bytes) -> ImportFileMetadata:
         sanitized = self.sanitize_filename(filename)
-        if len(content) > MAX_IMPORT_FILE_SIZE_BYTES:
+        if len(content) > self.max_size_bytes:
             raise ImportFileStorageError("Import file exceeds the maximum allowed size.")
 
         extension = Path(sanitized).suffix.lower()
@@ -70,3 +87,6 @@ class ImportFileStorage:
             raise ImportFileStorageError("Stored import file path is invalid.")
 
         return destination.read_bytes()
+
+
+ImportFileStorage = LocalImportFileStorage

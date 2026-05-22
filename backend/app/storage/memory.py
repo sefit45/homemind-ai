@@ -12,6 +12,8 @@ from app.domain.ledger import (
     Transaction,
     User,
 )
+from app.security.audit_log import AuditEvent
+from app.storage.transactions import NoopTransactionManager
 
 ModelT = TypeVar("ModelT")
 
@@ -91,6 +93,28 @@ class InMemoryAIInsightRepository(InMemoryRepository[AIInsight]):
     pass
 
 
+class InMemoryAuditEventRepository:
+    def __init__(self) -> None:
+        self._items: dict[UUID, AuditEvent] = {}
+
+    async def list_all(self) -> list[AuditEvent]:
+        return [deepcopy(item) for item in self._items.values()]
+
+    async def list_for_user(self, user_id: UUID) -> list[AuditEvent]:
+        return [
+            deepcopy(item)
+            for item in self._items.values()
+            if item.user_id == user_id
+        ]
+
+    async def save(self, event: AuditEvent) -> AuditEvent:
+        self._items[event.id] = deepcopy(event)
+        return deepcopy(event)
+
+    def clear(self) -> None:
+        self._items.clear()
+
+
 class InMemoryStore:
     def __init__(self) -> None:
         self.users = InMemoryUserRepository()
@@ -101,6 +125,8 @@ class InMemoryStore:
         self.liabilities = InMemoryLiabilityRepository()
         self.import_batches = InMemoryImportBatchRepository()
         self.ai_insights = InMemoryAIInsightRepository()
+        self.audit_events = InMemoryAuditEventRepository()
+        self.transaction_manager = NoopTransactionManager()
 
     def clear(self) -> None:
         self.users.clear()
@@ -111,4 +137,4 @@ class InMemoryStore:
         self.liabilities.clear()
         self.import_batches.clear()
         self.ai_insights.clear()
-
+        self.audit_events.clear()

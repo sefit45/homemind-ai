@@ -1,7 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
+
+if TYPE_CHECKING:
+    from app.storage.repositories import AuditEventRepository
 
 
 @dataclass(frozen=True)
@@ -16,6 +19,17 @@ class AuditEvent:
 
 
 class AuditLog:
+    def __init__(
+        self,
+        repository: "AuditEventRepository | None" = None,
+        enabled: bool = True,
+    ) -> None:
+        self.repository = repository
+        self.enabled = enabled
+
     async def record(self, event: AuditEvent) -> None:
-        # Phase 1 scaffold: persist to audit_events in a later phase.
+        if not self.enabled or not self.repository:
+            return None
+
+        await self.repository.save(event)
         return None

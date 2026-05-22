@@ -11,6 +11,7 @@ from app.domain.ledger import (
     Transaction,
     User,
 )
+from app.security.audit_log import AuditEvent
 
 ModelT = TypeVar("ModelT")
 
@@ -59,3 +60,13 @@ class ImportBatchRepository(Repository[ImportBatch], Protocol):
 class AIInsightRepository(Repository[AIInsight], Protocol):
     pass
 
+
+class AuditEventRepository(Protocol):
+    async def list_all(self) -> list[AuditEvent]:
+        ...
+
+    async def list_for_user(self, user_id: UUID) -> list[AuditEvent]:
+        ...
+
+    async def save(self, event: AuditEvent) -> AuditEvent:
+        ...

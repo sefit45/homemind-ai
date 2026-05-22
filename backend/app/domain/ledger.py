@@ -9,6 +9,7 @@ from app.domain.enums import (
     AccountType,
     AssetType,
     ImportBatchStatus,
+    ImportFileType,
     ImportSourceType,
     InsightType,
     InstitutionType,
@@ -107,13 +108,22 @@ class Liability(DomainModel):
 class ImportBatch(DomainModel):
     user_id: UUID
     source_type: ImportSourceType
+    provider: str | None = None
     provider_key: str | None = None
     original_filename: str | None = None
+    file_type: ImportFileType | None = None
     object_storage_key: str | None = None
-    status: ImportBatchStatus = ImportBatchStatus.pending
+    status: ImportBatchStatus = ImportBatchStatus.created
     total_rows: int = 0
+    imported_count: int = 0
+    rejected_count: int = 0
+    duplicate_candidates_count: int = 0
     imported_transactions: int = 0
     rejected_rows: int = 0
+    validation_errors: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[dict[str, Any]] = Field(default_factory=list)
+    created_transaction_ids: list[UUID] = Field(default_factory=list)
+    duplicate_candidate_ids: list[UUID] = Field(default_factory=list)
     error_message: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -130,3 +140,65 @@ class AIInsight(DomainModel):
     prompt_version: str | None = None
     evidence: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ImportFileMetadata(BaseModel):
+    original_filename: str
+    file_type: ImportFileType
+    size_bytes: int
+    storage_key: str | None = None
+
+    model_config = ConfigDict(use_enum_values=True)
+
+
+class ImportValidationError(BaseModel):
+    message: str
+    row_number: int | None = None
+    field: str | None = None
+    code: str = "validation_error"
+
+
+class ImportWarning(BaseModel):
+    message: str
+    row_number: int | None = None
+    code: str = "warning"
+
+
+class ParsedRawTransaction(BaseModel):
+    row_number: int
+    raw: dict[str, Any]
+
+
+class NormalizedTransactionCandidate(BaseModel):
+    row_number: int
+    user_id: UUID
+    account_id: UUID
+    import_batch_id: UUID
+    source_type: ImportSourceType
+    source_provider: str | None = None
+    transaction_date: date
+    amount: Decimal
+    currency: str = "ILS"
+    direction: TransactionDirection
+    transaction_type: TransactionType
+    merchant_raw: str | None = None
+    description: str
+    raw_payload: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(use_enum_values=True)
+
+
+class ImportParseResult(BaseModel):
+    import_batch_id: UUID
+    status: ImportBatchStatus
+    imported_count: int = 0
+    rejected_count: int = 0
+    duplicate_candidates_count: int = 0
+    validation_errors: list[ImportValidationError] = Field(default_factory=list)
+    warnings: list[ImportWarning] = Field(default_factory=list)
+    created_transaction_ids: list[UUID] = Field(default_factory=list)
+    duplicate_candidate_ids: list[UUID] = Field(default_factory=list)
+    requires_review: bool = False
+    summary_message: str = ""
+
+    model_config = ConfigDict(use_enum_values=True)

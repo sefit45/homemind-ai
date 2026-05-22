@@ -32,6 +32,7 @@ def get_import_service() -> ImportService:
     return ImportService(
         users=store.users,
         import_batches=store.import_batches,
+        ledger=get_ledger_service(),
     )
 
 
@@ -40,4 +41,3 @@ def get_ai_orchestration_service() -> AIOrchestrationService:
         users=store.users,
         insights=store.ai_insights,
     )
-

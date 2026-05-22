@@ -25,18 +25,33 @@ class AssetType(str, Enum):
 
 
 class ImportBatchStatus(str, Enum):
-    pending = "pending"
-    processing = "processing"
-    completed = "completed"
+    created = "created"
+    uploaded = "uploaded"
+    parsing = "parsing"
+    parsed = "parsed"
     failed = "failed"
-    needs_review = "needs_review"
+    requires_review = "requires_review"
+    partially_imported = "partially_imported"
+    pending = "created"
+    processing = "parsing"
+    completed = "parsed"
+    needs_review = "requires_review"
 
 
 class ImportSourceType(str, Enum):
+    bank = "bank"
+    credit_card = "credit_card"
     bank_statement = "bank_statement"
     credit_card_statement = "credit_card_statement"
     open_banking = "open_banking"
     manual = "manual"
+    generic = "generic"
+
+
+class ImportFileType(str, Enum):
+    csv = "csv"
+    xls = "xls"
+    xlsx = "xlsx"
 
 
 class InsightType(str, Enum):
@@ -75,4 +90,3 @@ class TransactionType(str, Enum):
     investment = "investment"
     fee = "fee"
     unknown = "unknown"
-

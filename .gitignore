@@ -1,31 +1,33 @@
-# ROOT
-
-# NODE
-node_modules
-**/node_modules
-
-# DIST
-dist
-**/dist
-
 # ENV
 .env
-**/.env
+.env.*
 
-# PYTHON
-__pycache__
+# Node
+node_modules/
+
+# Python
+__pycache__/
 *.pyc
 
-# BACKEND
-backend/uploads
-backend/__pycache__
-backend/.env
+# Build
+dist/
+build/
 
-# EXPO
-.expo
+# Cache
+.cache/
+Cache/
+Cache_Data/
+tmp/
+temp/
 
-# VSCODE
-.vscode
+# Browser Sessions
+bank-session/
+playwright/.auth/
 
-# MAC
+# Logs
+logs/
+*.log
+
+# OS
 .DS_Store
+Thumbs.db

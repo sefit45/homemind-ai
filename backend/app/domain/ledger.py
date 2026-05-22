@@ -1,9 +1,9 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.enums import (
     AccountType,
@@ -20,12 +20,10 @@ from app.domain.enums import (
 
 class DomainModel(BaseModel):
     id: UUID = Field(default_factory=uuid4)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    class Config:
-        orm_mode = True
-        use_enum_values = True
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class User(DomainModel):
@@ -132,4 +130,3 @@ class AIInsight(DomainModel):
     prompt_version: str | None = None
     evidence: dict[str, Any] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
-

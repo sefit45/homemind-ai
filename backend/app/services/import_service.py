@@ -137,7 +137,7 @@ class ImportService:
             async with self.transaction_manager.transaction():
                 rows = parser.parse(content, context, metadata)
                 result = await self._process_rows(import_batch, account_id, rows, parser, context)
-            await self._audit("import_parse_completed", import_batch)
+                await self._audit("import_parse_completed", import_batch)
             return result
         except ImportValidationError:
             import_batch.status = ImportBatchStatus.failed

@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: homemind-postgres
+    environment:
+      POSTGRES_DB: homemind
+      POSTGRES_USER: homemind
+      POSTGRES_PASSWORD: homemind
+    ports:
+      - "5432:5432"
+    volumes:
+      - homemind_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  homemind_postgres_data:
+

@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
+from json import dumps
 from typing import Any, Generic, TypeVar
 from uuid import UUID
 
@@ -22,10 +23,15 @@ from app.storage.postgres import (
 ModelT = TypeVar("ModelT")
 
 
+def _json(value: Any) -> str:
+    return dumps(value, default=str)
+
+
 class PostgresRepository(Generic[ModelT]):
     table_name: str
     id_column: str
     model_class: type[ModelT]
+    json_columns: set[str] = set()
 
     def __init__(self, connection_provider: PostgresConnectionProvider) -> None:
         self.connection_provider = connection_provider
@@ -47,8 +53,14 @@ class PostgresRepository(Generic[ModelT]):
     async def save(self, entity: ModelT) -> ModelT:
         payload = self._to_row(entity)
         columns = list(payload.keys())
-        assignments = ", ".join(f"{column} = EXCLUDED.{column}" for column in columns)
-        values = ", ".join(f":{column}" for column in columns)
+        update_columns = [column for column in columns if column != self.id_column]
+        assignments = ", ".join(
+            f"{column} = EXCLUDED.{column}" for column in update_columns
+        )
+        values = ", ".join(
+            f"CAST(:{column} AS JSONB)" if column in self.json_columns else f":{column}"
+            for column in columns
+        )
         sql = (
             f"INSERT INTO {self.table_name} ({', '.join(columns)}) "
             f"VALUES ({values}) ON CONFLICT ({self.id_column}) DO UPDATE SET {assignments}"
@@ -59,11 +71,15 @@ class PostgresRepository(Generic[ModelT]):
     def _from_row(self, row: dict[str, Any]) -> ModelT:
         payload = dict(row)
         payload["id"] = payload.pop(self.id_column)
+        payload.pop("stored_filename", None)
         return self.model_class(**payload)
 
     def _to_row(self, entity: ModelT) -> dict[str, Any]:
         payload = entity.model_dump(mode="json")
         payload[self.id_column] = payload.pop("id")
+        for column in self.json_columns:
+            if column in payload:
+                payload[column] = _json(payload[column])
         return payload
 
 
@@ -84,6 +100,7 @@ class PostgresInstitutionRepository(PostgresRepository[Institution]):
     table_name = "institutions"
     id_column = "institution_id"
     model_class = Institution
+    json_columns = {"metadata"}
 
     async def list_for_user(self, user_id: UUID) -> list[Institution]:
         rows = await self.connection_provider.fetch_all(
@@ -97,12 +114,14 @@ class PostgresAccountRepository(PostgresRepository[Account]):
     table_name = "accounts"
     id_column = "account_id"
     model_class = Account
+    json_columns = {"metadata"}
 
 
 class PostgresTransactionRepository(PostgresRepository[Transaction]):
     table_name = "transactions"
     id_column = "transaction_id"
     model_class = Transaction
+    json_columns = {"raw_payload"}
 
     async def list_for_account(self, account_id: UUID) -> list[Transaction]:
         rows = await self.connection_provider.fetch_all(
@@ -116,24 +135,39 @@ class PostgresAssetRepository(PostgresRepository[Asset]):
     table_name = "assets"
     id_column = "asset_id"
     model_class = Asset
+    json_columns = {"metadata"}
 
 
 class PostgresLiabilityRepository(PostgresRepository[Liability]):
     table_name = "liabilities"
     id_column = "liability_id"
     model_class = Liability
+    json_columns = {"metadata"}
 
 
 class PostgresImportBatchRepository(PostgresRepository[ImportBatch]):
     table_name = "import_batches"
     id_column = "import_batch_id"
     model_class = ImportBatch
+    json_columns = {
+        "validation_errors",
+        "warnings",
+        "created_transaction_ids",
+        "duplicate_candidate_ids",
+        "metadata",
+    }
 
 
 class PostgresAIInsightRepository(PostgresRepository[AIInsight]):
     table_name = "ai_insights"
     id_column = "ai_insight_id"
     model_class = AIInsight
+    json_columns = {
+        "related_transaction_ids",
+        "related_account_ids",
+        "evidence",
+        "metadata",
+    }
 
 
 class PostgresAuditEventRepository:
@@ -163,7 +197,8 @@ class PostgresAuditEventRepository:
             INSERT INTO audit_events (
                 audit_event_id, user_id, event_type, entity_type, entity_id, metadata, created_at
             ) VALUES (
-                :audit_event_id, :user_id, :event_type, :entity_type, :entity_id, :metadata, :created_at
+                :audit_event_id, :user_id, :event_type, :entity_type, :entity_id,
+                CAST(:metadata AS JSONB), :created_at
             ) ON CONFLICT (audit_event_id) DO UPDATE SET
                 user_id = EXCLUDED.user_id,
                 event_type = EXCLUDED.event_type,
@@ -177,7 +212,7 @@ class PostgresAuditEventRepository:
                 "event_type": event.event_type,
                 "entity_type": event.resource_type,
                 "entity_id": event.resource_id,
-                "metadata": event.metadata,
+                "metadata": _json(event.metadata),
                 "created_at": event.created_at,
             },
         )

@@ -19,6 +19,7 @@ from app.services.ledger_service import LedgerService
 from app.storage.import_files import LocalImportFileStorage
 from app.storage.memory import InMemoryStore
 from app.storage.postgres_repositories import PostgresStore
+from app.storage.postgres_repositories import PostgresTransactionRepository
 
 
 class SettingsTest(TestCase):
@@ -34,8 +35,16 @@ class SettingsTest(TestCase):
             with self.assertRaisesRegex(SettingsError, "DATABASE_URL is required"):
                 get_settings()
 
-    def test_postgres_store_constructs_without_live_database(self):
-        store = PostgresStore("postgresql://user:pass@localhost:5432/homemind")
+    def test_postgres_store_constructs_with_connection_provider(self):
+        class FakeConnectionProvider:
+            def __init__(self, database_url: str) -> None:
+                self.database_url = database_url
+
+        with patch(
+            "app.storage.postgres_repositories.PostgresConnectionProvider",
+            FakeConnectionProvider,
+        ):
+            store = PostgresStore("postgresql://user:pass@localhost:5432/homemind")
 
         self.assertIsNotNone(store.users)
         self.assertIsNotNone(store.transaction_manager)
@@ -61,6 +70,33 @@ class SettingsTest(TestCase):
         self.assertIn("idx_transactions_import_batch_id", migration)
         self.assertIn("validation_errors JSONB", migration)
         self.assertIn("audit_event_id UUID PRIMARY KEY", migration)
+
+    def test_migration_bootstrap_files_exist(self):
+        self.assertTrue(Path("alembic.ini").exists())
+        self.assertTrue(Path("app/storage/migrations/env.py").exists())
+        self.assertTrue(Path("app/storage/migrations/versions/0001_initial_ledger.py").exists())
+        self.assertTrue(Path("POSTGRES.md").exists())
+
+    def test_postgres_repository_row_domain_mapping(self):
+        repository = PostgresTransactionRepository(connection_provider=None)
+        transaction = Transaction(
+            user_id="00000000-0000-0000-0000-000000000001",
+            account_id="00000000-0000-0000-0000-000000000002",
+            source_type=ImportSourceType.bank,
+            transaction_date=date(2026, 5, 1),
+            amount=Decimal("12.50"),
+            direction=TransactionDirection.debit,
+            transaction_type=TransactionType.expense,
+            description="Mapping",
+            raw_payload={"nested": ["value"]},
+        )
+
+        row = repository._to_row(transaction)
+        mapped = repository._from_row({**row, "raw_payload": {"nested": ["value"]}})
+
+        self.assertIn("transaction_id", row)
+        self.assertEqual(mapped.id, transaction.id)
+        self.assertEqual(mapped.amount, Decimal("12.50"))
 
 
 class PersistenceBoundaryTest(IsolatedAsyncioTestCase):

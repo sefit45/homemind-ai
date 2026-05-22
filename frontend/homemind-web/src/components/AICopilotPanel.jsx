@@ -162,7 +162,7 @@ export default function AICopilotPanel() {
           content: answer,
         },
       ]);
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {

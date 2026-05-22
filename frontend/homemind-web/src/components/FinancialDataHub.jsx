@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import BankStatementImportCenter from "./BankStatementImportCenter";
 import TransactionImportCenter from "./TransactionImportCenter";
 import RawTransactionsTable from "./RawTransactionsTable";
@@ -15,30 +15,28 @@ export default function FinancialDataHub({ onTransactionsProcessed }) {
   const [showCreditImport, setShowCreditImport] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
 
-  const stats = useMemo(() => {
-    const bank = getBankTransactions();
-    const credit = loadStoredTransactions();
-    const history = loadFinancialHistory();
+  const bank = getBankTransactions();
+  const credit = loadStoredTransactions();
+  const history = loadFinancialHistory();
 
-    const all = [...bank, ...credit];
+  const all = [...bank, ...credit];
 
-    const income = all
-      .filter((tx) => Number(tx.amount || 0) > 0)
-      .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const income = all
+    .filter((tx) => tx.type === "income")
+    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
 
-    const expenses = all
-      .filter((tx) => Number(tx.amount || 0) < 0)
-      .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
+  const expenses = all
+    .filter((tx) => tx.type === "expense")
+    .reduce((sum, tx) => sum + Math.abs(Number(tx.amount || 0)), 0);
 
-    return {
-      bankCount: bank.length,
-      creditCount: credit.filter((tx) => tx.source !== "bank_statement").length,
-      monthsCount: history.length,
-      income,
-      expenses,
-      net: income - expenses,
-    };
-  }, [showBankImport, showCreditImport, showDebug]);
+  const stats = {
+    bankCount: bank.length,
+    creditCount: credit.filter((tx) => tx.source !== "bank_statement").length,
+    monthsCount: history.length,
+    income,
+    expenses,
+    net: income - expenses,
+  };
 
   return (
     <section

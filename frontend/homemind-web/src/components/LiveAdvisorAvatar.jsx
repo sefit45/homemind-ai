@@ -1,14 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { generateDailyBriefing } from "../services/dailyBriefingEngine";
 
 export default function LiveAdvisorAvatar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [briefing, setBriefing] = useState("");
-
-  useEffect(() => {
-    const text = generateDailyBriefing();
-    setBriefing(text);
-  }, []);
+  const [briefing] = useState(() => generateDailyBriefing());
 
   function speak(text) {
     if (!window.speechSynthesis) return;

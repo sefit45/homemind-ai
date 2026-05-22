@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export default function LiveHumanAdvisor() {
   const videoRef = useRef(null);
-  const [hasPlayedOnce, setHasPlayedOnce] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -85,7 +84,6 @@ export default function LiveHumanAdvisor() {
               playsInline
               controls
               preload="auto"
-              onEnded={() => setHasPlayedOnce(true)}
             />
 
             <div className="absolute right-6 top-6 z-20 max-w-[320px] rounded-3xl border border-cyan-400/20 bg-[#07111f]/90 backdrop-blur-xl p-6 shadow-2xl">

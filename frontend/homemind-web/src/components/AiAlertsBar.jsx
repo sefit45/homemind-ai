@@ -211,7 +211,10 @@ const [activeTab, setActiveTab] = useState("dashboard");
     };
   }, []);
 
-  const userAssets = assetsSummary.assets || [];
+  const userAssets = useMemo(
+    () => assetsSummary.assets || [],
+    [assetsSummary.assets]
+  );
 
   const assetAllocationData = useMemo(
     () => buildAssetAllocationData(userAssets),

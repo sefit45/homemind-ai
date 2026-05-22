@@ -121,14 +121,17 @@ export function normalizeStoredTransaction(
 }
 
 function buildTransactionKey(transaction: Transaction): string {
+  const merchant =
+    transaction.merchant || transaction.description || (transaction as any).rawMerchant || "";
+  const amount = Number(transaction.amount || 0);
+
   return [
-    (transaction as any).importFileName,
-    (transaction as any).sourceSheet,
-    (transaction as any).sourceRow,
+    transaction.source || transaction.issuer,
     transaction.date,
-    transaction.merchant,
-    transaction.amount,
+    merchant,
+    Number.isFinite(amount) ? amount.toFixed(2) : transaction.amount,
     transaction.issuer,
+    transaction.reference || "",
   ]
     .map((value) => String(value ?? "").trim().toLowerCase())
     .join("|");

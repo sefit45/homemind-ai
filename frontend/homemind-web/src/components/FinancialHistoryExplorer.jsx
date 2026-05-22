@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { loadFinancialHistory } from "../services/financialHistoryVault";
 
 function formatCurrency(value) {
@@ -41,10 +41,12 @@ function getMonthStats(month) {
 }
 
 export default function FinancialHistoryExplorer() {
-  const [history, setHistory] = useState([]);
-  const [selectedMonthId, setSelectedMonthId] = useState("");
+  const [history, setHistory] = useState(() => loadFinancialHistory().reverse());
+  const [selectedMonthId, setSelectedMonthId] = useState(
+    () => loadFinancialHistory().reverse()[0]?.id || ""
+  );
 
-  const refreshHistory = () => {
+  const refreshHistory = useCallback(() => {
     const nextHistory = loadFinancialHistory().reverse();
 
     setHistory(nextHistory);
@@ -56,11 +58,9 @@ export default function FinancialHistoryExplorer() {
 
       return nextHistory[0]?.id || "";
     });
-  };
+  }, []);
 
   useEffect(() => {
-    refreshHistory();
-
     window.addEventListener("homemind:transactions-updated", refreshHistory);
     window.addEventListener("homemind:history-cleared", refreshHistory);
 
@@ -68,7 +68,7 @@ export default function FinancialHistoryExplorer() {
       window.removeEventListener("homemind:transactions-updated", refreshHistory);
       window.removeEventListener("homemind:history-cleared", refreshHistory);
     };
-  }, []);
+  }, [refreshHistory]);
 
   const selectedMonth =
     history.find((month) => month.id === selectedMonthId) || history[0];

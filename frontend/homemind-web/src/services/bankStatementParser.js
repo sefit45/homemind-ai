@@ -102,6 +102,18 @@ function isFutureDate(date) {
   return parsedDate > today;
 }
 
+function isValidParsedTransaction(tx) {
+  const parsedDate = new Date(tx.date);
+
+  return (
+    !Number.isNaN(parsedDate.getTime()) &&
+    !!cleanText(tx.description || tx.merchant) &&
+    Number.isFinite(Number(tx.amount)) &&
+    Number(tx.amount) !== 0 &&
+    ["income", "expense", "transfer"].includes(tx.type)
+  );
+}
+
 function buildHeaderMap(headers) {
   const map = {};
 
@@ -294,6 +306,7 @@ export async function parseBankStatement(file) {
     .filter((tx) => tx.description)
     .filter((tx) => !isSummaryOrMetadataRow(tx.description))
     .filter((tx) => Number(tx.amount) !== 0)
+    .filter(isValidParsedTransaction)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   const totalIncome = transactions

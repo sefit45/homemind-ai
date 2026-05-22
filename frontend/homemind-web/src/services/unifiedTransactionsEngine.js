@@ -6,14 +6,14 @@ import { enrichTransactionWithConfidence } from "./aiConfidenceEngine";
 const VALID_TRANSACTION_TYPES = ["income", "expense", "transfer"];
 
 function buildUnifiedTransactionKey(tx) {
+  const merchant = tx.description || tx.merchant || "";
+  const amount = Number(tx.amount || 0);
+
   return [
     tx.source || tx.issuer || "",
-    tx.importFileName || "",
-    tx.sourceSheet || "",
-    tx.sourceRow || "",
     tx.date || "",
-    tx.description || tx.merchant || "",
-    tx.amount || "",
+    merchant,
+    Number.isFinite(amount) ? amount.toFixed(2) : tx.amount || "",
     tx.balance || "",
     tx.reference || "",
   ]
@@ -205,7 +205,7 @@ export function detectRecurringTransactions() {
   });
 
   return Object.entries(merchants)
-    .filter(([_, txs]) => txs.length >= 2)
+    .filter((entry) => entry[1].length >= 2)
     .map(([merchant, txs]) => ({
       merchant,
       count: txs.length,

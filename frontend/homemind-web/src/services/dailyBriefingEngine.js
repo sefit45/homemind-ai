@@ -20,14 +20,7 @@ export function generateDailyBriefing() {
 
   const transactions = latestMonth.transactions || [];
   const expenses = transactions.filter((tx) => tx.type === "expense");
-  const income = transactions.filter((tx) => tx.type === "income");
-
   const totalExpenses = expenses.reduce(
-    (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
-    0
-  );
-
-  const totalIncome = income.reduce(
     (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
     0
   );

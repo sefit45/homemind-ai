@@ -104,11 +104,11 @@ export function askFinancialAi(question) {
   const allTransactions = getAllUnifiedTransactions();
   const transactions = filterByMonth(allTransactions, question);
 
-  const expenses = transactions.filter((tx) => Number(tx.amount || 0) < 0);
-  const income = transactions.filter((tx) => Number(tx.amount || 0) > 0);
+  const expenses = transactions.filter((tx) => tx.type === "expense");
+  const income = transactions.filter((tx) => tx.type === "income");
 
-  const totalExpenses = sumTransactions(transactions, (tx) => Number(tx.amount || 0) < 0);
-  const totalIncome = sumTransactions(transactions, (tx) => Number(tx.amount || 0) > 0);
+  const totalExpenses = sumTransactions(transactions, (tx) => tx.type === "expense");
+  const totalIncome = sumTransactions(transactions, (tx) => tx.type === "income");
   const net = totalIncome - totalExpenses;
 
   if (!transactions.length) {

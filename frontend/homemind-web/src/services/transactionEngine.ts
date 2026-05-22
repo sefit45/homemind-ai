@@ -117,6 +117,23 @@ function isDateLike(value: unknown): boolean {
   );
 }
 
+function isValidParsedDate(date: string): boolean {
+  const parsed = new Date(date);
+
+  return !Number.isNaN(parsed.getTime());
+}
+
+function validateParsedTransaction(transaction: Transaction | null): transaction is Transaction {
+  if (!transaction) return false;
+  if (!isValidParsedDate(transaction.date)) return false;
+  if (!clean(transaction.merchant)) return false;
+  if (!Number.isFinite(Number(transaction.amount))) return false;
+  if (Number(transaction.amount) === 0) return false;
+  if (!["expense", "income", "transfer"].includes(transaction.type)) return false;
+
+  return true;
+}
+
 function isSummaryRow(rowText: string): boolean {
   const text = normalizeText(rowText);
 
@@ -287,6 +304,7 @@ function normalizeMaxRow(params: {
     originalCategory,
     rawMerchant: merchant,
     rawAmount: clean(amount),
+    source: "credit_card",
     sourceSheet: params.sheetName,
     sourceRow: params.rowIndex + 1,
     mappingReason,
@@ -370,7 +388,7 @@ export async function parseTransactionFile(
         issuer,
       });
 
-      if (!tx) return;
+      if (!validateParsedTransaction(tx)) return;
 
       allTransactions.push(tx);
     });

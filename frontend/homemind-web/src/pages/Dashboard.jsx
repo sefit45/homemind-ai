@@ -1,3 +1,4 @@
+import BankingVoiceCommand from "../components/BankingVoiceCommand";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -13,7 +14,6 @@ import {
 
 
 
-import AiAlertsBar from "../components/AiAlertsBar";
 import AIIntelligenceStrip from "../components/AIIntelligenceStrip";
 import TransactionsList from "../components/TransactionsList";
 import MonthlyAnalytics from "../components/MonthlyAnalytics";
@@ -215,7 +215,10 @@ export default function Dashboard() {
     };
   }, []);
 
-  const userAssets = assetsSummary.assets || [];
+  const userAssets = useMemo(
+    () => assetsSummary.assets || [],
+    [assetsSummary.assets]
+  );
 
   const assetAllocationData = useMemo(
     () => buildAssetAllocationData(userAssets),
@@ -674,6 +677,7 @@ export default function Dashboard() {
         <main className="dashboard-compact flex-1 min-w-0 p-3 lg:p-5">
           <div className="max-w-[1680px] mx-auto">
 <TopNavigation />
+<BankingVoiceCommand />
 
 {activeTab === "dashboard" ? (
   <>

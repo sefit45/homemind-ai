@@ -3,13 +3,14 @@ import { saveCategoryLearning } from "./transactionLearningStore";
 const STORAGE_KEY = "homemind_bank_transactions_v1";
 
 function buildBankTransactionKey(tx) {
+  const amount = Number(tx.amount || 0);
+
   return [
     tx.date,
     tx.description,
-    tx.amount,
+    Number.isFinite(amount) ? amount.toFixed(2) : tx.amount,
     tx.balance,
     tx.reference,
-    tx.sourceRow,
   ]
     .map((value) => String(value ?? "").trim().toLowerCase())
     .join("|");

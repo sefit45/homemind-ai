@@ -18,16 +18,24 @@ function normalizeAmount(value) {
 }
 
 function normalizeTransaction(tx) {
-  const amount = normalizeAmount(tx.amount);
+  const rawAmount = normalizeAmount(tx.amount);
+  const absAmount = Math.abs(rawAmount);
 
   const isBank = tx.source === "bank_statement";
   const isCredit = tx.source === "credit_card";
 
-  const settlement = isBank && amount < 0 && isCreditCardSettlement(tx);
+  const settlement = isBank && rawAmount < 0 && isCreditCardSettlement(tx);
+  const type =
+    tx.type ||
+    (settlement ? "transfer" : rawAmount > 0 ? "income" : "expense");
+  const normalizedAmount =
+    type === "income" ? absAmount : type === "expense" ? -absAmount : 0;
 
   return {
     ...tx,
-    normalizedAmount: amount,
+    type,
+    normalizedAmount,
+    rawAmount,
     isBankTransaction: isBank,
     isCreditCardTransaction: isCredit,
     isCreditCardSettlement: settlement,
@@ -45,13 +53,13 @@ export function calculateUnifiedFinancialSummary() {
   const transactions = loadUnifiedTransactions();
 
   const trueIncome = transactions
-    .filter((tx) => tx.normalizedAmount > 0)
+    .filter((tx) => tx.type === "income")
     .reduce((sum, tx) => sum + tx.normalizedAmount, 0);
 
   const trueExpenses = transactions
     .filter(
       (tx) =>
-        tx.normalizedAmount < 0 &&
+        tx.type === "expense" &&
         !tx.excludeFromTrueExpenses
     )
     .reduce((sum, tx) => sum + Math.abs(tx.normalizedAmount), 0);
@@ -60,7 +68,7 @@ export function calculateUnifiedFinancialSummary() {
     .filter(
       (tx) =>
         tx.isBankTransaction &&
-        tx.normalizedAmount < 0 &&
+        tx.type === "expense" &&
         !tx.excludeFromTrueExpenses
     )
     .reduce((sum, tx) => sum + Math.abs(tx.normalizedAmount), 0);

@@ -1,3 +1,4 @@
+import { explainTransactionClassification } from "../services/transactionReasoningEngine";
 import { useMemo, useState } from "react";
 import {
   getAllUnifiedTransactions,
@@ -83,7 +84,7 @@ function getTransactionAmountClass(tx) {
 }
 
 function updateTransactionTypeLocally(tx, type) {
-  
+
   const storageKey =
     tx.source === "bank_statement"
       ? "homemind_bank_transactions_v1"
@@ -124,10 +125,17 @@ export default function AIConfidencePanel() {
   const [filter, setFilter] = useState("review");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  const summary = useMemo(() => getConfidenceSummary(), [refreshKey]);
-  const learningStats = useMemo(() => getLearningStats(), [refreshKey]);
+  const summary = useMemo(() => {
+    void refreshKey;
+    return getConfidenceSummary();
+  }, [refreshKey]);
+  const learningStats = useMemo(() => {
+    void refreshKey;
+    return getLearningStats();
+  }, [refreshKey]);
 
   const allTransactions = useMemo(() => {
+    void refreshKey;
     return getAllUnifiedTransactions();
   }, [refreshKey]);
 
@@ -407,6 +415,34 @@ export default function AIConfidencePanel() {
                         תוקן ידנית
                       </span>
                     )}
+                    
+                    {(() => {
+  const reasoning = explainTransactionClassification(tx);
+
+  return (
+    <div className="mt-3 rounded-2xl border border-cyan-300/10 bg-cyan-400/[0.06] p-3 text-xs leading-6 text-cyan-100">
+      <div className="font-black text-cyan-200 mb-1">
+        למה ה־AI סיווג כך?
+      </div>
+
+      <div>{reasoning.summary}</div>
+
+      <ul className="mt-2 list-disc pr-5 space-y-1">
+        {reasoning.reasons.slice(0, 4).map((reason, index) => (
+          <li key={index}>{reason}</li>
+        ))}
+      </ul>
+
+      {reasoning.warnings.length > 0 && (
+        <div className="mt-3 rounded-xl border border-rose-400/20 bg-rose-400/10 p-2 text-rose-200">
+          {reasoning.warnings.map((warning, index) => (
+            <div key={index}>⚠ {warning}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+})()}
                   </div>
 
                   {isEditing && (

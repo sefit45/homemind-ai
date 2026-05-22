@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { loadFinancialHistory } from "../services/financialHistoryVault";
 import { resolveTransactionCategory } from "../services/transactionStore";
 
@@ -73,30 +73,24 @@ export default function MonthlyAnalytics() {
 
   const transactions = selectedMonth?.transactions || [];
 
-  const analyticsData = useMemo(() => {
-    const income = getIncomeTransactions(transactions).reduce(
-      (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
-      0
-    );
+  const income = getIncomeTransactions(transactions).reduce(
+    (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
+    0
+  );
 
-    const expenses = getExpenseTransactions(transactions).reduce(
-      (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
-      0
-    );
+  const expenses = getExpenseTransactions(transactions).reduce(
+    (sum, tx) => sum + Math.abs(Number(tx.amount || 0)),
+    0
+  );
 
-    const netCashflow = income - expenses;
-    const recurringExpenses = estimateRecurringExpenses(transactions);
-    const topCategory = getTopExpenseCategory(transactions);
-
-    return {
-      income,
-      expenses,
-      netCashflow,
-      recurringExpenses,
-      topCategory,
-      transactionCount: transactions.length,
-    };
-  }, [transactions]);
+  const analyticsData = {
+    income,
+    expenses,
+    netCashflow: income - expenses,
+    recurringExpenses: estimateRecurringExpenses(transactions),
+    topCategory: getTopExpenseCategory(transactions),
+    transactionCount: transactions.length,
+  };
 
   if (!history.length) {
     return (
